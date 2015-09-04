@@ -1,0 +1,343 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="14.0" DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <Import Project="$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props" Condition="Exists('$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props')" />
+  <PropertyGroup>
+    <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
+    <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
+    <ProjectGuid>{EFCBAC5A-2704-40E9-B15C-3012A94D62F2}</ProjectGuid>
+    <OutputType>Library</OutputType>
+    <AppDesignerFolder>Properties</AppDesignerFolder>
+    <RootNamespace>Networking.Common</RootNamespace>
+    <AssemblyName>Networking.Common</AssemblyName>
+    <TargetFrameworkVersion>v4.5.2</TargetFrameworkVersion>
+    <FileAlignment>512</FileAlignment>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
+    <DebugSymbols>true</DebugSymbols>
+    <DebugType>full</DebugType>
+    <Optimize>false</Optimize>
+    <OutputPath>bin\Debug\</OutputPath>
+    <DefineConstants>DEBUG;TRACE</DefineConstants>
+    <ErrorReport>prompt</ErrorReport>
+    <WarningLevel>4</WarningLevel>
+    <LangVersion>5</LangVersion>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
+    <DebugType>pdbonly</DebugType>
+    <Optimize>true</Optimize>
+    <OutputPath>bin\Release\</OutputPath>
+    <DefineConstants>TRACE</DefineConstants>
+    <ErrorReport>prompt</ErrorReport>
+    <WarningLevel>4</WarningLevel>
+  </PropertyGroup>
+  <ItemGroup>
+    <Reference Include="System" />
+    <Reference Include="System.Configuration" />
+    <Reference Include="System.Core" />
+    <Reference Include="System.Runtime.Serialization" />
+    <Reference Include="System.Xml.Linq" />
+    <Reference Include="System.Data.DataSetExtensions" />
+    <Reference Include="Microsoft.CSharp" />
+    <Reference Include="System.Data" />
+    <Reference Include="System.Net.Http" />
+    <Reference Include="System.Xml" />
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Include="BitConverter2.cs" />
+    <Compile Include="ConstructorExtensions.cs" />
+    <Compile Include="DictionaryExtension.cs" />
+    <Compile Include="GuidFactory.cs" />
+    <Compile Include="InstanceFactory.cs" />
+    <Compile Include="IO\DirectoryUtils.cs" />
+    <Compile Include="IO\NamespaceDoc.cs" />
+    <Compile Include="IO\OneFilePerItemQueue.cs" />
+    <Compile Include="IO\PersistentCircularIndex.cs" />
+    <Compile Include="IO\PersistentQueue.cs" />
+    <Compile Include="IO\PersistentQueueConfiguration.cs" />
+    <Compile Include="IO\Serializers\BinaryFormatterSerializer.cs" />
+    <Compile Include="IQueue.cs" />
+    <Compile Include="ISerializer.cs" />
+    <Compile Include="Logging\ILogEntryFilter.cs" />
+    <Compile Include="Logging\ILogger.cs" />
+    <Compile Include="Logging\ILoggerFilter.cs" />
+    <Compile Include="Logging\ILogProvider.cs" />
+    <Compile Include="Logging\LogEntry.cs" />
+    <Compile Include="Logging\Loggers\BaseLogger.cs" />
+    <Compile Include="Logging\Loggers\CompositeLogger.cs" />
+    <Compile Include="Logging\Loggers\ConsoleLogger.cs" />
+    <Compile Include="Logging\Loggers\Filters\ExceptionsOnly.cs" />
+    <Compile Include="Logging\Loggers\Filters\LogLevelFilter.cs" />
+    <Compile Include="Logging\Loggers\Filters\NamespaceDoc.cs" />
+    <Compile Include="Logging\Loggers\Filters\NoFilter.cs" />
+    <Compile Include="Logging\Loggers\NamespaceDoc.cs" />
+    <Compile Include="Logging\Loggers\NullLogger.cs" />
+    <Compile Include="Logging\Loggers\SystemDebugLogger.cs" />
+    <Compile Include="Logging\LogLevel.cs" />
+    <Compile Include="Logging\LogManager.cs" />
+    <Compile Include="Logging\NamespaceDoc.cs" />
+    <Compile Include="Logging\Providers\LogProvider.cs" />
+    <Compile Include="Logging\Providers\NamespaceDoc.cs" />
+    <Compile Include="Logging\Providers\NamespaceFilter.cs" />
+    <Compile Include="Logging\Providers\NoFilter.cs" />
+    <Compile Include="Logging\Providers\NullLogProvider.cs" />
+    <Compile Include="MemoryQueue.cs" />
+    <Compile Include="MethodInfoExtensions.cs" />
+    <Compile Include="NamespaceDoc.cs" />
+    <Compile Include="Net\Authentication\AuthenticationDeniedException.cs" />
+    <Compile Include="Net\Authentication\AuthenticationRequiredException.cs" />
+    <Compile Include="Net\Authentication\HashClientAuthenticator.cs" />
+    <Compile Include="Net\Authentication\IClientAuthenticator.cs" />
+    <Compile Include="Net\Authentication\IUserAccount.cs" />
+    <Compile Include="Net\Authentication\Messages\Authenticate.cs" />
+    <Compile Include="Net\Authentication\Messages\AuthenticateReply.cs" />
+    <Compile Include="Net\Authentication\Messages\AuthenticateReplyState.cs" />
+    <Compile Include="Net\Authentication\Messages\AuthenticationHandshake.cs" />
+    <Compile Include="Net\Authentication\Messages\AuthenticationHandshakeReply.cs" />
+    <Compile Include="Net\Authentication\Messages\AuthenticationMessageFactory.cs" />
+    <Compile Include="Net\Authentication\Messages\IAuthenticate.cs" />
+    <Compile Include="Net\Authentication\Messages\IAuthenticateReply.cs" />
+    <Compile Include="Net\Authentication\Messages\IAuthenticationHandshake.cs" />
+    <Compile Include="Net\Authentication\Messages\IAuthenticationHandshakeReply.cs" />
+    <Compile Include="Net\Authentication\Messages\IAuthenticationMessageFactory.cs" />
+    <Compile Include="Net\Buffers\BufferSlice.cs" />
+    <Compile Include="Net\Buffers\BufferSlicePool.cs" />
+    <Compile Include="Net\Buffers\IBufferSlice.cs" />
+    <Compile Include="Net\Buffers\IBufferSlicePool.cs" />
+    <Compile Include="Net\Buffers\PoolEmptyException.cs" />
+    <Compile Include="Net\ChannelException.cs" />
+    <Compile Include="Net\Channels\BufferPreProcessorHandler.cs" />
+    <Compile Include="Net\Channels\ChannelData.cs" />
+    <Compile Include="Net\Channels\ChannelFailureHandler.cs" />
+    <Compile Include="Net\Channels\ClientCertificate.cs" />
+    <Compile Include="Net\Channels\ClientSideSslStreamBuilder.cs" />
+    <Compile Include="Net\Channels\DisconnectHandler.cs" />
+    <Compile Include="Net\Channels\EmptyEndpoint.cs" />
+    <Compile Include="Net\Channels\IAsyncArgsFactory.cs" />
+    <Compile Include="Net\Channels\IChannelData.cs" />
+    <Compile Include="Net\Channels\ISocketBuffer.cs" />
+    <Compile Include="Net\Channels\ISslStreamBuilder.cs" />
+    <Compile Include="Net\Channels\ITcpChannel.cs" />
+    <Compile Include="Net\Channels\ITcpChannelFactory.cs" />
+    <Compile Include="Net\Channels\MessageHandler.cs" />
+    <Compile Include="Net\Channels\SecureTcpChannel.cs" />
+    <Compile Include="Net\Channels\SecureTcpChannelFactory.cs" />
+    <Compile Include="Net\Channels\ServerSideSslStreamBuilder.cs" />
+    <Compile Include="Net\Channels\SocketAsyncEventArgsWrapper.cs" />
+    <Compile Include="Net\Channels\SocketBuffer.cs" />
+    <Compile Include="Net\Channels\TcpChannel.cs" />
+    <Compile Include="Net\Channels\TcpChannelFactory.cs" />
+    <Compile Include="Net\ChannelTcpClient.cs" />
+    <Compile Include="Net\ChannelTcpListener.cs" />
+    <Compile Include="Net\ChannelTcpListenerConfiguration.cs" />
+    <Compile Include="Net\ClientFilterResult.cs" />
+    <Compile Include="Net\FilterMessageHandler.cs" />
+    <Compile Include="Net\IMessageDecoder.cs" />
+    <Compile Include="Net\IMessageEncoder.cs" />
+    <Compile Include="Net\IMessageQueue.cs" />
+    <Compile Include="Net\MessageQueue.cs" />
+    <Compile Include="Net\NamespaceDoc.cs" />
+    <Compile Include="Net\Protocols\ClientConnectedEventArgs.cs" />
+    <Compile Include="Net\Protocols\ClientDisconnectedEventArgs.cs" />
+    <Compile Include="Net\Protocols\FreeSwitch\CommandAsyncEvent.cs" />
+    <Compile Include="Net\Protocols\FreeSwitch\EslChannelState.cs" />
+    <Compile Include="Net\Protocols\FreeSwitch\Command\ApiCommand.cs" />
+    <Compile Include="Net\Protocols\FreeSwitch\Command\AuthCommand.cs" />
+    <Compile Include="Net\Protocols\FreeSwitch\Command\BaseCommand.cs" />
+    <Compile Include="Net\Protocols\FreeSwitch\Command\BgApiCommand.cs" />
+    <Compile Include="Net\Protocols\FreeSwitch\Command\ConnectCommand.cs" />
+    <Compile Include="Net\Protocols\FreeSwitch\Command\DivertEventsCommand.cs" />
+    <Compile Include="Net\Protocols\FreeSwitch\Command\EventCommand.cs" />
+    <Compile Include="Net\Protocols\FreeSwitch\Command\EventsCommand.cs" />
+    <Compile Include="Net\Protocols\FreeSwitch\Command\ExitCommand.cs" />
+    <Compile Include="Net\Protocols\FreeSwitch\Command\GetVarCommand.cs" />
+    <Compile Include="Net\Protocols\FreeSwitch\Command\HangupCommand.cs" />
+    <Compile Include="Net\Protocols\FreeSwitch\Command\MyEventsCommand.cs" />
+    <Compile Include="Net\Protocols\FreeSwitch\Command\NixEventCommand.cs" />
+    <Compile Include="Net\Protocols\FreeSwitch\Command\ResumeCommand.cs" />
+    <Compile Include="Net\Protocols\FreeSwitch\Command\SchedApiCommand.cs" />
+    <Compile Include="Net\Protocols\FreeSwitch\Command\SendMsgCommand.cs" />
+    <Compile Include="Net\Protocols\FreeSwitch\Command\SetVarCommand.cs" />
+    <Compile Include="Net\Protocols\FreeSwitch\Enumm.cs" />
+    <Compile Include="Net\Protocols\FreeSwitch\EslChannelVariable.cs" />
+    <Compile Include="Net\Protocols\FreeSwitch\EslDecodedMessage.cs" />
+    <Compile Include="Net\Protocols\FreeSwitch\EslEventType.cs" />
+    <Compile Include="Net\Protocols\FreeSwitch\EslLogLevels.cs" />
+    <Compile Include="Net\Protocols\FreeSwitch\EslMessage.cs" />
+    <Compile Include="Net\Protocols\FreeSwitch\FreeSwitchDecoder.cs" />
+    <Compile Include="Net\Protocols\FreeSwitch\FreeSwitchEncoder.cs" />
+    <Compile Include="Net\Protocols\FreeSwitch\EslEventList.cs" />
+    <Compile Include="Net\Protocols\FreeSwitch\EslHangupCause.cs" />
+    <Compile Include="Net\Protocols\FreeSwitch\EslStringReader.cs" />
+    <Compile Include="Net\Protocols\FreeSwitch\Message\ApiResponse.cs" />
+    <Compile Include="Net\Protocols\FreeSwitch\Message\AuthRequest.cs" />
+    <Compile Include="Net\Protocols\FreeSwitch\Message\CommandReply.cs" />
+    <Compile Include="Net\Protocols\FreeSwitch\Outbound\FreeSwitchClient.cs" />
+    <Compile Include="Net\Protocols\FreeSwitch\SequenceGenerator.cs" />
+    <Compile Include="Net\Protocols\Http\Authentication\BasicAuthentication.cs" />
+    <Compile Include="Net\Protocols\Http\Authentication\CookieAuthentication.cs" />
+    <Compile Include="Net\Protocols\Http\Authentication\DigestAuthenticator.cs" />
+    <Compile Include="Net\Protocols\Http\Authentication\Digest\Nonce.cs" />
+    <Compile Include="Net\Protocols\Http\Authentication\Digest\NonceService.cs" />
+    <Compile Include="Net\Protocols\Http\Authentication\HostAsRealmRepository.cs" />
+    <Compile Include="Net\Protocols\Http\Authentication\IAccountService.cs" />
+    <Compile Include="Net\Protocols\Http\Authentication\IAuthenticationUser.cs" />
+    <Compile Include="Net\Protocols\Http\Authentication\IAuthenticator.cs" />
+    <Compile Include="Net\Protocols\Http\Authentication\IPrincipalFactory.cs" />
+    <Compile Include="Net\Protocols\Http\Authentication\IRealmRepository.cs" />
+    <Compile Include="Net\Protocols\Http\Authentication\IUserWithRoles.cs" />
+    <Compile Include="Net\Protocols\Http\Authentication\PrincipalFactoryContext.cs" />
+    <Compile Include="Net\Protocols\Http\Authentication\SingleRealmRepository.cs" />
+    <Compile Include="Net\Protocols\Http\BadRequestException.cs" />
+    <Compile Include="Net\Protocols\Http\External\ConcurrentPriorityQueue.cs" />
+    <Compile Include="Net\Protocols\Http\HttpCookie.cs" />
+    <Compile Include="Net\Protocols\Http\HttpCookieCollection.cs" />
+    <Compile Include="Net\Protocols\Http\HttpException.cs" />
+    <Compile Include="Net\Protocols\Http\HttpListener.cs" />
+    <Compile Include="Net\Protocols\Http\HttpMessage.cs" />
+    <Compile Include="Net\Protocols\Http\HttpMessageDecoder.cs" />
+    <Compile Include="Net\Protocols\Http\HttpMessageEncoder.cs" />
+    <Compile Include="Net\Protocols\Http\HttpRequest.cs" />
+    <Compile Include="Net\Protocols\Http\HttpRequestBase.cs" />
+    <Compile Include="Net\Protocols\Http\HttpResponse.cs" />
+    <Compile Include="Net\Protocols\Http\HttpResponseBase.cs" />
+    <Compile Include="Net\Protocols\Http\HttpResponseCookie.cs" />
+    <Compile Include="Net\Protocols\Http\IHeaderCollection.cs" />
+    <Compile Include="Net\Protocols\Http\IHttpCookie.cs" />
+    <Compile Include="Net\Protocols\Http\IHttpCookieCollection.cs" />
+    <Compile Include="Net\Protocols\Http\IHttpFile.cs" />
+    <Compile Include="Net\Protocols\Http\IHttpFileCollection.cs" />
+    <Compile Include="Net\Protocols\Http\IHttpMessage.cs" />
+    <Compile Include="Net\Protocols\Http\IHttpMessageWithForm.cs" />
+    <Compile Include="Net\Protocols\Http\IHttpRequest.cs" />
+    <Compile Include="Net\Protocols\Http\IHttpResponse.cs" />
+    <Compile Include="Net\Protocols\Http\IParameter.cs" />
+    <Compile Include="Net\Protocols\Http\IParameterCollection.cs" />
+    <Compile Include="Net\Protocols\Http\IResponseCookie.cs" />
+    <Compile Include="Net\Protocols\Http\Messages\HeaderCollection.cs" />
+    <Compile Include="Net\Protocols\Http\Messages\HeaderParser.cs" />
+    <Compile Include="Net\Protocols\Http\Messages\HttpCookieParser.cs" />
+    <Compile Include="Net\Protocols\Http\Messages\HttpFile.cs" />
+    <Compile Include="Net\Protocols\Http\Messages\HttpFileCollection.cs" />
+    <Compile Include="Net\Protocols\Http\Messages\HttpHeaderValue.cs" />
+    <Compile Include="Net\Protocols\Http\Messages\Parameter.cs" />
+    <Compile Include="Net\Protocols\Http\Messages\ParameterCollection.cs" />
+    <Compile Include="Net\Protocols\Http\Messages\ParseException.cs" />
+    <Compile Include="Net\Protocols\Http\Messages\ReaderResult.cs" />
+    <Compile Include="Net\Protocols\Http\Messages\TextReaderExtensions.cs" />
+    <Compile Include="Net\Protocols\Http\Messages\UrlDecoder.cs" />
+    <Compile Include="Net\Protocols\Http\PipelinedMessageQueue.cs" />
+    <Compile Include="Net\Protocols\Http\Range.cs" />
+    <Compile Include="Net\Protocols\Http\RangeCollection.cs" />
+    <Compile Include="Net\Protocols\Http\Serializers\FormAndFilesResult.cs" />
+    <Compile Include="Net\Protocols\Http\Serializers\MultipartSerializer.cs" />
+    <Compile Include="Net\Protocols\Http\Serializers\UrlFormattedMessageSerializer.cs" />
+    <Compile Include="Net\Protocols\Http\WebSocket\IWebSocketMessage.cs" />
+    <Compile Include="Net\Protocols\Http\WebSocket\WebSocketClientConnectedEventArgs.cs" />
+    <Compile Include="Net\Protocols\Http\WebSocket\WebSocketClientConnectEventArgs.cs" />
+    <Compile Include="Net\Protocols\Http\WebSocket\WebSocketDecoder.cs" />
+    <Compile Include="Net\Protocols\Http\WebSocket\WebSocketEncoder.cs" />
+    <Compile Include="Net\Protocols\Http\WebSocket\WebSocketFin.cs" />
+    <Compile Include="Net\Protocols\Http\WebSocket\WebSocketFrame.cs" />
+    <Compile Include="Net\Protocols\Http\WebSocket\WebSocketListener.cs" />
+    <Compile Include="Net\Protocols\Http\WebSocket\WebSocketMask.cs" />
+    <Compile Include="Net\Protocols\Http\WebSocket\WebSocketMessage.cs" />
+    <Compile Include="Net\Protocols\Http\WebSocket\WebSocketOpcode.cs" />
+    <Compile Include="Net\Protocols\Http\WebSocket\WebSocketRequest.cs" />
+    <Compile Include="Net\Protocols\Http\WebSocket\WebSocketResponse.cs" />
+    <Compile Include="Net\Protocols\Http\WebSocket\WebSocketRsv.cs" />
+    <Compile Include="Net\Protocols\Http\WebSocket\WebSocketUpgradeRequest.cs" />
+    <Compile Include="Net\Protocols\Http\WebSocket\WebSocketUpgradeResponse.cs" />
+    <Compile Include="Net\Protocols\Http\WebSocket\WebSocketUtils.cs" />
+    <Compile Include="Net\Protocols\IMessagingListener.cs" />
+    <Compile Include="Net\Protocols\MicroMsg\MicroMessageClient.cs" />
+    <Compile Include="Net\Protocols\MicroMsg\MicroMessageDecoder.cs" />
+    <Compile Include="Net\Protocols\MicroMsg\MicroMessageEncoder.cs" />
+    <Compile Include="Net\Protocols\MicroMsg\MicroMessageTcpListener.cs" />
+    <Compile Include="Net\Protocols\MicroMsg\NamespaceDoc.cs" />
+    <Compile Include="Net\Protocols\Serializers\CompositeSerializer.cs" />
+    <Compile Include="Net\Protocols\Serializers\DataContractMessageSerializer.cs" />
+    <Compile Include="Net\Protocols\Serializers\DecoderFailureException.cs" />
+    <Compile Include="Net\Protocols\Serializers\IMessageSerializer.cs" />
+    <Compile Include="Net\Protocols\Serializers\Mono\HttpMultipart.cs" />
+    <Compile Include="Net\Protocols\Serializers\Mono\StrUtils.cs" />
+    <Compile Include="Net\Protocols\Stomp\Broker\BadRequestException.cs" />
+    <Compile Include="Net\Protocols\Stomp\Broker\FrameExtensions.cs" />
+    <Compile Include="Net\Protocols\Stomp\Broker\IStompClient.cs" />
+    <Compile Include="Net\Protocols\Stomp\Broker\IStompQueue.cs" />
+    <Compile Include="Net\Protocols\Stomp\Broker\ISubscriptionSubscriber.cs" />
+    <Compile Include="Net\Protocols\Stomp\Broker\ITransactionManager.cs" />
+    <Compile Include="Net\Protocols\Stomp\Broker\MessageHandlers\AbortHandler.cs" />
+    <Compile Include="Net\Protocols\Stomp\Broker\MessageHandlers\AckHandler.cs" />
+    <Compile Include="Net\Protocols\Stomp\Broker\MessageHandlers\BeginHandler.cs" />
+    <Compile Include="Net\Protocols\Stomp\Broker\MessageHandlers\CommitHandler.cs" />
+    <Compile Include="Net\Protocols\Stomp\Broker\MessageHandlers\ConnectHandler.cs" />
+    <Compile Include="Net\Protocols\Stomp\Broker\MessageHandlers\DisconnectHandler.cs" />
+    <Compile Include="Net\Protocols\Stomp\Broker\MessageHandlers\IFrameHandler.cs" />
+    <Compile Include="Net\Protocols\Stomp\Broker\MessageHandlers\NackHandler.cs" />
+    <Compile Include="Net\Protocols\Stomp\Broker\MessageHandlers\SendHandler.cs" />
+    <Compile Include="Net\Protocols\Stomp\Broker\MessageHandlers\SubscribeHandler.cs" />
+    <Compile Include="Net\Protocols\Stomp\Broker\MessageHandlers\UnsubscribeHandler.cs" />
+    <Compile Include="Net\Protocols\Stomp\Broker\NotFoundException.cs" />
+    <Compile Include="Net\Protocols\Stomp\Broker\Services\IAuthenticationService.cs" />
+    <Compile Include="Net\Protocols\Stomp\Broker\Services\IQueueRepository.cs" />
+    <Compile Include="Net\Protocols\Stomp\Broker\Services\LoginResponse.cs" />
+    <Compile Include="Net\Protocols\Stomp\Broker\Services\MemoryQueueRepository.cs" />
+    <Compile Include="Net\Protocols\Stomp\Broker\Services\NoAuthenticationService.cs" />
+    <Compile Include="Net\Protocols\Stomp\Broker\Services\TransactionManager.cs" />
+    <Compile Include="Net\Protocols\Stomp\Broker\StompBroker.cs" />
+    <Compile Include="Net\Protocols\Stomp\Broker\StompClient.cs" />
+    <Compile Include="Net\Protocols\Stomp\Broker\StompQueue.cs" />
+    <Compile Include="Net\Protocols\Stomp\Broker\Subscription.cs" />
+    <Compile Include="Net\Protocols\Stomp\Broker\Transaction.cs" />
+    <Compile Include="Net\Protocols\Stomp\FrameExtensions.cs" />
+    <Compile Include="Net\Protocols\Stomp\Frames\BasicFrame.cs" />
+    <Compile Include="Net\Protocols\Stomp\Frames\FrameHeaderHandler.cs" />
+    <Compile Include="Net\Protocols\Stomp\Frames\FrameNameHandler.cs" />
+    <Compile Include="Net\Protocols\Stomp\Frames\HeaderCollection.cs" />
+    <Compile Include="Net\Protocols\Stomp\Frames\HeaderParser.cs" />
+    <Compile Include="Net\Protocols\Stomp\Frames\ParseException.cs" />
+    <Compile Include="Net\Protocols\Stomp\Frames\Server\Error.cs" />
+    <Compile Include="Net\Protocols\Stomp\IFrame.cs" />
+    <Compile Include="Net\Protocols\Stomp\IFrameFactory.cs" />
+    <Compile Include="Net\Protocols\Stomp\IHeaderCollection.cs" />
+    <Compile Include="Net\Protocols\Stomp\StompClient.cs" />
+    <Compile Include="Net\Protocols\Stomp\StompDecoder.cs" />
+    <Compile Include="Net\Protocols\Stomp\StompEncoder.cs" />
+    <Compile Include="Net\Protocols\Stomp\StompTcpListener.cs" />
+    <Compile Include="Net\Protocols\Strings\StringDecoder.cs" />
+    <Compile Include="Net\Protocols\Strings\StringEncoder.cs" />
+    <Compile Include="ObjectExtensions.cs" />
+    <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="QueueFullException.cs" />
+    <Compile Include="Reflection\ExpressionExtensions.cs" />
+    <Compile Include="Security\IPasswordHasher.cs" />
+    <Compile Include="Security\PasswordHasherRfc2898.cs" />
+    <Compile Include="TypeExtensions.cs" />
+    <Compile Include="WaitHandleExtensions.cs" />
+  </ItemGroup>
+  <ItemGroup>
+    <Folder Include="Net\Protocols\MessageDeserializers\" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="Logging\ReadMe.md" />
+    <None Include="Net\Authentication\Messages\ReadMe.md" />
+    <None Include="Net\cert\GriffinNetworkingTemp.pfx" />
+    <None Include="Net\Channels\ReadMe.md" />
+    <None Include="Net\Protocols\MicroMsg\ReadMe.md" />
+    <None Include="Net\Protocols\ReadMe.md" />
+    <None Include="Net\Protocols\Stomp\ReadMe.md" />
+    <None Include="Net\Protocols\Strings\ReadMe.md" />
+    <None Include="ReadMe.md" />
+  </ItemGroup>
+  <ItemGroup>
+    <Content Include="Net\cert\howto.txt" />
+  </ItemGroup>
+  <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
+  <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
+       Other similar extension points exist, see Microsoft.Common.targets.
+  <Target Name="BeforeBuild">
+  </Target>
+  <Target Name="AfterBuild">
+  </Target>
+  -->
+</Project>
