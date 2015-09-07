@@ -17,7 +17,7 @@ namespace Networking.Demo {
 
         private static void Main(string[] args) {
             client = new FreeSwitchClient(Address, Port, Password);
-            client.Connect();
+            client.ConnectAsync();
 
             Thread.Sleep(500);
 

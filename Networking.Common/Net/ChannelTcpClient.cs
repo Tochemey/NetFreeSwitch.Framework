@@ -293,7 +293,6 @@ namespace Networking.Common.Net {
 
             _channel.Send(message);
 
-
             await _sendCompletedSemaphore.WaitAsync();
             _sendQueueSemaphore.Release();
         }
