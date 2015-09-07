@@ -12,19 +12,23 @@ namespace Networking.Common.Net.Protocols.FreeSwitch {
         private const string EOL = "\r\n";
         private const char LINE_FEED_CHAR = '\n';
 
-        private static byte[] _buffer;
-        private static int _offsetInOurBuffer;
-        private static int _bytesLeftInSocketBuffer;
+        private static int _bytesReceived;
         private readonly Encoding _encoding = Encoding.ASCII;
         private Action<object> _messageReceived;
+        private static readonly byte[] _buffer = new byte[65535];
+        private static int _offsetInOurBuffer;
+
+        public FreeSwitchDecoder() {
+            _messageReceived = o => { };
+            _offsetInOurBuffer = 0;
+        }
 
         /// <summary>
-        /// Reset decoder state so that we can decode a new message
+        ///     Reset decoder state so that we can decode a new message
         /// </summary>
         public void Clear() {
-            _offsetInOurBuffer = 0;
-            _bytesLeftInSocketBuffer = -1;
-            _buffer = null;
+            _bytesReceived = -1;
+            Array.Clear(_buffer, 0, _buffer.Length);
         }
 
         /// <summary>
@@ -36,89 +40,82 @@ namespace Networking.Common.Net.Protocols.FreeSwitch {
             var offsetInSocketBuffer = buffer.Offset;
 
             // Number of Bytes received
-             _bytesLeftInSocketBuffer = buffer.BytesTransferred;
-
-            if (_buffer != null) {
-                byte[] tmp = new byte[_buffer.Length];
-                Buffer.BlockCopy(_buffer, 0, tmp, 0, _buffer.Length);
-                _buffer = new byte[_buffer.Length + buffer.BytesTransferred];
-                Buffer.BlockCopy(tmp, 0, _buffer, 0, tmp.Length);
-                Buffer.BlockCopy(buffer.Buffer, 0, tmp, tmp.Length, buffer.BytesTransferred);
-            }
-            else {
-                _buffer = new byte[buffer.BytesTransferred];
-                // Move the byte read into our buffer
-                Buffer.BlockCopy(buffer.Buffer, offsetInSocketBuffer, _buffer, _offsetInOurBuffer, buffer.BytesTransferred);
-            }
-
+            _bytesReceived = buffer.BytesTransferred;
             while (true) {
-                if (_bytesLeftInSocketBuffer <= 0) break;
+                if (_bytesReceived <= 0) break;
+                Buffer.BlockCopy(buffer.Buffer, offsetInSocketBuffer, _buffer, _offsetInOurBuffer, buffer.BytesTransferred);
 
-                _offsetInOurBuffer = 0;
-
-                string textReceived = _encoding.GetString(_buffer);
-                textReceived = textReceived.TrimStart(LINE_FEED_CHAR);
-                if (!textReceived.Contains(MESSAGE_END_STRING)) {
-                    // Read more bytes
-                    _offsetInOurBuffer += textReceived.Length;
+                string _textReceived = _encoding.GetString(_buffer);
+                _textReceived = _textReceived.TrimStart(LINE_FEED_CHAR).Replace("\0", string.Empty);
+                if (!_textReceived.Contains(MESSAGE_END_STRING)) {
+                    _offsetInOurBuffer += _bytesReceived;
                     return;
                 }
 
-                // At this stage we have received at least the Headers.
                 int contentLength = 0;
-                string headerLine = textReceived.Substring(0, textReceived.IndexOf(MESSAGE_END_STRING, StringComparison.Ordinal));
+                string headerLine = _textReceived.Substring(0, _textReceived.IndexOf(MESSAGE_END_STRING, StringComparison.Ordinal));
                 var headers = ReadHeaderLines(headerLine);
                 if (headers != null
                     && headers.Count > 0)
                     if (headers.ContainsKey("Content-Length")) contentLength = int.Parse(headers["Content-Length"]);
 
-                // Here let us check the validity of content length
+                int len;
                 if (contentLength <= 0) {
                     // Message does not have content length only headers.
-                    var decodedMessage = new EslDecodedMessage(headerLine, string.Empty, textReceived);
+                    var decodedMessage = new EslDecodedMessage(headerLine, string.Empty, _textReceived);
                     MessageReceived(decodedMessage);
                     Clear();
 
                     // Let us check whether there is another message in the buffer sent
-                    textReceived = textReceived.Substring(textReceived.IndexOf(MESSAGE_END_STRING, StringComparison.Ordinal) + MESSAGE_END_STRING.Length);
-                    if (!string.IsNullOrEmpty(textReceived)
-                        && !textReceived.Equals(MESSAGE_END_STRING)
-                        && !textReceived.Equals(EOL)) {
-                        _buffer = _encoding.GetBytes(textReceived);
-                    }
+                    _textReceived = _textReceived.Substring(_textReceived.IndexOf(MESSAGE_END_STRING, StringComparison.Ordinal) + MESSAGE_END_STRING.Length);
+                    if (string.IsNullOrEmpty(_textReceived)
+                        || _textReceived.Equals(MESSAGE_END_STRING)
+                        || _textReceived.Equals(EOL)) continue;
+                    // Length of extra bytes
+                    len = _encoding.GetByteCount(_textReceived);
+                    _encoding.GetBytes(_textReceived, 0, _textReceived.Length, _buffer, 0);
+                    _offsetInOurBuffer += len;
                 }
                 else {
                     // Message does have body as well as header.
-                    string bodyLine = textReceived.Substring(textReceived.IndexOf(MESSAGE_END_STRING, StringComparison.Ordinal) + MESSAGE_END_STRING.Length);
+                    string bodyLine = _textReceived.Substring(_textReceived.IndexOf(MESSAGE_END_STRING, StringComparison.Ordinal) + MESSAGE_END_STRING.Length);
                     if (string.IsNullOrEmpty(bodyLine)) {
-                        // We need to read more bytes for the body
-                        _offsetInOurBuffer += contentLength;
+                        len = _encoding.GetByteCount(_textReceived);
+                        // We need to read more bytes for the body    
+                        _offsetInOurBuffer += len;
                         return;
                     }
 
                     // body has been read. However there are more to read to make it complete
                     if (bodyLine.Length < contentLength) {
-                        // The body is not yet complete we need to read more
-                        _offsetInOurBuffer += bodyLine.Length;
+                        // get the count of the received bytes
+                        len = _encoding.GetByteCount(_textReceived);
+                        // The body is not yet complete we need to read more  
+                        _offsetInOurBuffer += len;
                         return;
                     }
 
                     // body has been fully read
                     if (contentLength == bodyLine.Length) {
-                        MessageReceived(new EslDecodedMessage(headerLine, bodyLine, textReceived));
+                        MessageReceived(new EslDecodedMessage(headerLine, bodyLine, _textReceived));
                         Clear();
                         return;
                     }
 
                     // There is another message in the buffer
                     if (bodyLine.Length > contentLength) {
-                        int extraMessageLength = bodyLine.Length - contentLength;
-                        string additionalMessage = bodyLine.Substring(extraMessageLength);
-                        bodyLine = bodyLine.Substring(0, contentLength);
-                        _buffer = _encoding.GetBytes(additionalMessage); // reset our buffer to the received bytes so that the additional message can be handled properly.
-                        MessageReceived(new EslDecodedMessage(headerLine, bodyLine, textReceived));
+                        string bodyLine2 = bodyLine.Substring(0, contentLength);
+                        MessageReceived(new EslDecodedMessage(headerLine, bodyLine2, headerLine+ bodyLine2));
                         Clear();
-                        return;
+
+                        _textReceived = bodyLine.Remove(bodyLine.IndexOf(bodyLine2, StringComparison.Ordinal), bodyLine2.Length);
+                        if (string.IsNullOrEmpty(_textReceived)
+                            || _textReceived.Equals(MESSAGE_END_STRING)
+                            || _textReceived.Equals(EOL)) return;
+                        // Length of extra bytes
+                        len = _encoding.GetByteCount(_textReceived);
+                        _encoding.GetBytes(_textReceived, 0, _textReceived.Length, _buffer, 0);
+                        _offsetInOurBuffer += len;
                     }
                 }
             }
@@ -155,15 +152,14 @@ namespace Networking.Common.Net.Protocols.FreeSwitch {
                 string value = str.Substring(str.IndexOf(":", StringComparison.Ordinal) + 1);
                 if (value.Contains("#")) {
                     for (int x = 0; x < value.Length; x++) {
-                        if (value[x] == '#') {
-                            if ((x > 0)
-                                && (value[x - 1] != '\\')) {
-                                value = value.Substring(0, x);
-                                break;
-                            }
-                            if (x == 0)
-                                value = "";
+                        if (value[x] != '#') continue;
+                        if ((x > 0)
+                            && (value[x - 1] != '\\')) {
+                            value = value.Substring(0, x);
+                            break;
                         }
+                        if (x == 0)
+                            value = "";
                     }
                 }
                 if (value.Length <= 0) continue;

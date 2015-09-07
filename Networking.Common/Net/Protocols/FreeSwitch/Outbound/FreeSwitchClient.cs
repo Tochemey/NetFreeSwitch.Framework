@@ -1,10 +1,12 @@
 ﻿using System;
 using System.Collections.Concurrent;
 using System.Collections.Specialized;
+using System.Linq;
 using System.Net;
-using System.Runtime.CompilerServices;
+using System.Threading;
 using System.Threading.Tasks;
 using Networking.Common.Net.Protocols.FreeSwitch.Command;
+using Networking.Common.Net.Protocols.FreeSwitch.Events;
 using Networking.Common.Net.Protocols.FreeSwitch.Message;
 
 namespace Networking.Common.Net.Protocols.FreeSwitch.Outbound {
@@ -15,7 +17,30 @@ namespace Networking.Common.Net.Protocols.FreeSwitch.Outbound {
         private readonly ChannelTcpClient _channelTcpClient;
         private static bool _authenticated;
         private static bool _connected;
-        private readonly ConcurrentQueue<CommandAsyncEvent> _requestsQueue;
+        private ConcurrentQueue<CommandAsyncEvent> _requestsQueue;
+        private readonly EventsListenInfo _eventsListener;
+
+        public event EventHandler<EslEventArgs> OnChannelBridge = delegate { };
+        public event EventHandler<EslEventArgs> OnChannelUnbridge = delegate { };
+        public event EventHandler<EslEventArgs> OnCallUpdate = delegate { };
+        public event EventHandler<EslEventArgs> OnChannelProgress = delegate { };
+        public event EventHandler<EslEventArgs> OnChannelProgressMedia = delegate { };
+        public event EventHandler<EslEventArgs> OnChannelState = delegate { };
+        public event EventHandler<EslEventArgs> OnChannelPark = delegate { };
+        public event EventHandler<EslEventArgs> OnChannelUnPark = delegate { };
+        public event EventHandler<EslEventArgs> OnChannelExecute = delegate { };
+        public event EventHandler<EslEventArgs> OnChannelExecuteComplete = delegate { };
+        public event EventHandler<EslEventArgs> OnChannelHangup = delegate { };
+        public event EventHandler<EslEventArgs> OnChannelHangupComplete = delegate { };
+        public event EventHandler<EslEventArgs> OnSessionHeartbeat = delegate { };
+        public event EventHandler<EslEventArgs> OnBackgroundJob = delegate { };
+        public event EventHandler<EslEventArgs> OnDtmf = delegate { };
+        public event EventHandler<EslEventArgs> OnRecordStop = delegate { };
+        public event EventHandler<EslEventArgs> OnCustom = delegate { };
+        public event EventHandler<EslEventArgs> OnChannelAnswer = delegate { };
+        public event EventHandler<EslEventArgs> OnChannelOriginate = delegate { };
+        public event EventHandler<EslEventArgs> OnReceivedUnHandledEvent = delegate { };
+
 
         /// <summary>
         ///     This constructor sets user defined values to connect to FreeSwitch.
@@ -39,10 +64,11 @@ namespace Networking.Common.Net.Protocols.FreeSwitch.Outbound {
             _connected = false;
             _requestsQueue = new ConcurrentQueue<CommandAsyncEvent>();
             _channelTcpClient = new ChannelTcpClient(MessageEncoder, MessageDecoder);
+            _eventsListener = new EventsListenInfo();
         }
 
         /// <summary>
-        ///     This constructor sets user defined values to connect to FreeSwitch using in-built message encoder/dcoders
+        ///     This constructor sets user defined values to connect to FreeSwitch using in-built message encoder/decoders
         /// </summary>
         /// <param name="address">FreeSwitch mod_event_socket IP address or hostname</param>
         /// <param name="port">FreeSwitch mod_event_socket Port number</param>
@@ -60,10 +86,11 @@ namespace Networking.Common.Net.Protocols.FreeSwitch.Outbound {
             _connected = false;
             _requestsQueue = new ConcurrentQueue<CommandAsyncEvent>();
             _channelTcpClient = new ChannelTcpClient(MessageEncoder, MessageDecoder);
+            _eventsListener = new EventsListenInfo();
         }
 
         /// <summary>
-        ///     This constructor sets user defined values to connect to FreeSwitch using in-built message encoder/dcoders.
+        ///     This constructor sets user defined values to connect to FreeSwitch using in-built message encoder/decoders.
         ///     The connection timeout is set to zero
         /// </summary>
         /// <param name="address">FreeSwitch mod_event_socket IP address or hostname</param>
@@ -81,6 +108,7 @@ namespace Networking.Common.Net.Protocols.FreeSwitch.Outbound {
             _connected = false;
             _requestsQueue = new ConcurrentQueue<CommandAsyncEvent>();
             _channelTcpClient = new ChannelTcpClient(MessageEncoder, MessageDecoder);
+            _eventsListener = new EventsListenInfo();
         }
 
         /// <summary>
@@ -130,12 +158,14 @@ namespace Networking.Common.Net.Protocols.FreeSwitch.Outbound {
                     CommandReply reply = GetCommandReply(response);
                     if (reply == null) await _channelTcpClient.CloseAsync();
                     _authenticated = reply.IsSuccessful;
+                    //if (!string.IsNullOrEmpty(FreeSwitchEventFilter))
+                    //    if (await SubscribeToEvents()) _eventsListener.Start(Eavesdrop);
                 }
             }
         }
 
         /// <summary>
-        /// Disconnect from FreeSwitch mod_event_socket
+        ///     Disconnect from FreeSwitch mod_event_socket
         /// </summary>
         /// <returns></returns>
         public async Task Disconnect() {
@@ -147,11 +177,6 @@ namespace Networking.Common.Net.Protocols.FreeSwitch.Outbound {
         }
 
         /// <summary>
-        /// Used to release resources
-        /// </summary>
-        protected void Clean() { throw new NotImplementedException(); }
-
-        /// <summary>
         ///     SendApi().
         ///     It is used to send an api command to FreeSwitch.
         /// </summary>
@@ -160,7 +185,7 @@ namespace Networking.Common.Net.Protocols.FreeSwitch.Outbound {
         public async Task<ApiResponse> SendApi(ApiCommand command) {
             if (!_authenticated) return null;
             // Send the command
-            AddWaitingCommand(command);
+            EnqueueCommand(command);
             await _channelTcpClient.SendAsync(command);
             // Receive the response
             var response = await _channelTcpClient.ReceiveAsync<EslDecodedMessage>();
@@ -175,7 +200,7 @@ namespace Networking.Common.Net.Protocols.FreeSwitch.Outbound {
         public async Task<bool> SubscribeToEvents() {
             if (!_authenticated) return false;
             EventCommand command = new EventCommand(FreeSwitchEventFilter);
-            AddWaitingCommand(command);
+            EnqueueCommand(command);
             await _channelTcpClient.SendAsync(command);
             var response = await _channelTcpClient.ReceiveAsync<EslDecodedMessage>();
             var reply = await ValidateResponse(command, GetCommandReply(response)) as CommandReply;
@@ -191,7 +216,7 @@ namespace Networking.Common.Net.Protocols.FreeSwitch.Outbound {
         public async Task<CommandReply> Send(BaseCommand command) {
             if (!_authenticated) return null;
             // Send command
-            AddWaitingCommand(command);
+            EnqueueCommand(command);
             await _channelTcpClient.SendAsync(command);
             var response = await _channelTcpClient.ReceiveAsync<EslDecodedMessage>();
             return await ValidateResponse(command, GetCommandReply(response)) as CommandReply;
@@ -206,7 +231,7 @@ namespace Networking.Common.Net.Protocols.FreeSwitch.Outbound {
         public async Task<Guid> SendBgApi(BgApiCommand command) {
             if (!_authenticated) return Guid.Empty;
             // Send command
-            AddWaitingCommand(command);
+            EnqueueCommand(command);
             await _channelTcpClient.SendAsync(command);
             var response = await _channelTcpClient.ReceiveAsync<EslDecodedMessage>();
             var reply = await ValidateResponse(command, GetCommandReply(response)) as CommandReply;
@@ -272,21 +297,188 @@ namespace Networking.Common.Net.Protocols.FreeSwitch.Outbound {
         }
 
         /// <summary>
-        /// Connection State
+        ///     Used to release resources
+        /// </summary>
+        protected void Clean() {
+            Authenticated = false;
+            _requestsQueue = null;
+        }
+
+        /// <summary>
+        ///     Used to dispatch .NET events
+        /// </summary>
+        protected void DispatchEvents(EslEventType eventType, EslEventArgs ea) {
+            EventHandler<EslEventArgs> handler = null;
+            switch (eventType) {
+                case EslEventType.BACKGROUND_JOB:
+                    handler = OnBackgroundJob;
+                    break;
+                case EslEventType.CALL_UPDATE:
+                    handler = OnCallUpdate;
+                    break;
+                case EslEventType.CHANNEL_BRIDGE:
+                    handler = OnChannelBridge;
+                    break;
+                case EslEventType.CHANNEL_HANGUP:
+                    handler = OnChannelHangup;
+                    break;
+                case EslEventType.CHANNEL_HANGUP_COMPLETE:
+                    handler = OnChannelHangupComplete;
+                    break;
+                case EslEventType.CHANNEL_PROGRESS:
+                    handler = OnChannelProgress;
+                    break;
+                case EslEventType.CHANNEL_PROGRESS_MEDIA:
+                    handler = OnChannelProgressMedia;
+                    break;
+                case EslEventType.CHANNEL_EXECUTE:
+                    handler = OnChannelExecute;
+                    break;
+                case EslEventType.CHANNEL_EXECUTE_COMPLETE:
+                    handler = OnChannelExecuteComplete;
+                    break;
+                case EslEventType.CHANNEL_UNBRIDGE:
+                    handler = OnChannelUnbridge;
+                    break;
+                case EslEventType.SESSION_HEARTBEAT:
+                    handler = OnSessionHeartbeat;
+                    break;
+                case EslEventType.DTMF:
+                    handler = OnDtmf;
+                    break;
+                case EslEventType.RECORD_STOP:
+                    handler = OnRecordStop;
+                    break;
+                case EslEventType.CUSTOM:
+                    handler = OnCustom;
+                    break;
+                case EslEventType.CHANNEL_STATE:
+                    handler = OnChannelState;
+                    break;
+                case EslEventType.CHANNEL_ANSWER:
+                    handler = OnChannelAnswer;
+                    break;
+                case EslEventType.CHANNEL_ORIGINATE:
+                    handler = OnChannelOriginate;
+                    break;
+                case EslEventType.CHANNEL_PARK:
+                    handler = OnChannelPark;
+                    break;
+                case EslEventType.CHANNEL_UNPARK:
+                    handler = OnChannelUnPark;
+                    break;
+                case EslEventType.UN_HANDLED_EVENT:
+                    handler = OnReceivedUnHandledEvent;
+                    break;
+            }
+            if (handler == null) return;
+            try { handler(this, ea); }
+            catch {}
+        }
+
+        /// <summary>
+        ///     FreeSwitch Events listener hook
+        /// </summary>
+        protected async void Eavesdrop() {
+            // Set our thread information
+            _eventsListener.ListenThread.IsBackground = true;
+            _eventsListener.ListenThread.Name = string.Format("EventsListenerThread:{0}", Port);
+
+            // Mark us as running
+            _eventsListener.IsRunning = Connected && Authenticated;
+            while (_eventsListener.IsRunning) {
+                var response = await _channelTcpClient.ReceiveAsync<EslDecodedMessage>();
+                NameValueCollection headers = response.Headers;
+                string contentType = headers["Content-Type"];
+                if (string.IsNullOrEmpty(contentType)) continue;
+                contentType = contentType.Trim().ToLower();
+                if (contentType.Equals("text/event-plain")) {
+                    var eventData = response.BodyLines.AllKeys.ToDictionary(key => key, key => response.BodyLines[key]);
+                    EslEvent @event = new EslEvent(eventData);
+                    if (!string.IsNullOrEmpty(@event.EventName)) {
+                        switch (@event.EventName.ToUpper()) {
+                            case "CHANNEL_HANGUP":
+                                DispatchEvents(EslEventType.CHANNEL_HANGUP, new EslEventArgs(new ChannelHangup(@event.Items)));
+                                break;
+                            case "CHANNEL_HANGUP_COMPLETE":
+                                DispatchEvents(EslEventType.CHANNEL_HANGUP_COMPLETE, new EslEventArgs(new ChannelHangup(@event.Items)));
+                                break;
+                            case "CHANNEL_PROGRESS":
+                                DispatchEvents(EslEventType.CHANNEL_PROGRESS, new EslEventArgs(new ChannelProgress(@event.Items)));
+                                break;
+                            case "CHANNEL_PROGRESS_MEDIA":
+                                DispatchEvents(EslEventType.CHANNEL_PROGRESS_MEDIA, new EslEventArgs(new ChannelProgressMedia(@event.Items)));
+                                break;
+                            case "CHANNEL_EXECUTE":
+                                DispatchEvents(EslEventType.CHANNEL_EXECUTE, new EslEventArgs(new ChannelExecute(@event.Items)));
+                                break;
+                            case "CHANNEL_EXECUTE_COMPLETE":
+                                DispatchEvents(EslEventType.CHANNEL_EXECUTE_COMPLETE, new EslEventArgs(new ChannelExecuteComplete(@event.Items)));
+                                break;
+                            case "CHANNEL_BRIDGE":
+                                DispatchEvents(EslEventType.CHANNEL_BRIDGE, new EslEventArgs(new ChannelBridge(@event.Items)));
+                                break;
+                            case "CHANNEL_UNBRIDGE":
+                                DispatchEvents(EslEventType.CHANNEL_UNBRIDGE, new EslEventArgs(new ChannelUnbridge(@event.Items)));
+                                break;
+                            case "BACKGROUND_JOB":
+                                DispatchEvents(EslEventType.BACKGROUND_JOB, new EslEventArgs(new BackgroundJob(@event.Items)));
+                                break;
+                            case "SESSION_HEARTBEAT":
+                                DispatchEvents(EslEventType.SESSION_HEARTBEAT, new EslEventArgs(new SessionHeartbeat(@event.Items)));
+                                break;
+                            case "CHANNEL_STATE":
+                                DispatchEvents(EslEventType.CHANNEL_STATE, new EslEventArgs(new ChannelStateEvent(@event.Items)));
+                                break;
+                            case "DTMF":
+                                DispatchEvents(EslEventType.DTMF, new EslEventArgs(new Dtmf(@event.Items)));
+                                break;
+                            case "RECORD_STOP":
+                                DispatchEvents(EslEventType.RECORD_STOP, new EslEventArgs(new RecordStop(@event.Items)));
+                                break;
+                            case "CALL_UPDATE":
+                                DispatchEvents(EslEventType.CALL_UPDATE, new EslEventArgs(new CallUpdate(@event.Items)));
+                                break;
+                            case "CUSTOM":
+                                DispatchEvents(EslEventType.CUSTOM, new EslEventArgs(new Custom(@event.Items)));
+                                break;
+                            case "CHANNEL_ANSWER":
+                                DispatchEvents(EslEventType.CHANNEL_ANSWER, new EslEventArgs(@event));
+                                break;
+                            case "CHANNEL_ORIGINATE":
+                                DispatchEvents(EslEventType.CHANNEL_ORIGINATE, new EslEventArgs(@event));
+                                break;
+                            case "CHANNEL_PARK":
+                                DispatchEvents(EslEventType.CHANNEL_PARK, new EslEventArgs(new ChannelPark(@event.Items)));
+                                break;
+                            case "CHANNEL_UNPARK":
+                                DispatchEvents(EslEventType.CHANNEL_UNPARK, new EslEventArgs(@event));
+                                break;
+                            default:
+                                DispatchEvents(EslEventType.UN_HANDLED_EVENT, new EslEventArgs(@event));
+                                break;
+                        }
+                    }
+                }
+            }
+        }
+
+        /// <summary>
+        ///     Connection State
         /// </summary>
         public bool Connected { get { return _connected; } }
 
         /// <summary>
-        /// Authentication State
+        ///     Authentication State
         /// </summary>
-        public bool Authenticated { get { return _authenticated; } }
+        public bool Authenticated { get { return _authenticated; } set { _authenticated = value; } }
 
         /// <summary>
         ///     Add the command request to the waiting list.
         /// </summary>
         /// <param name="command">The command to send</param>
         /// <returns></returns>
-        protected CommandAsyncEvent AddWaitingCommand(BaseCommand command) {
+        protected CommandAsyncEvent EnqueueCommand(BaseCommand command) {
             var event2 = new CommandAsyncEvent(command);
             _requestsQueue.Enqueue(event2);
             return event2;

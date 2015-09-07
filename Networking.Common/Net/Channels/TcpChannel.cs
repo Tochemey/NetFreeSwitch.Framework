@@ -155,7 +155,7 @@ namespace Networking.Common.Net.Channels {
         /// <remarks>
         ///     Must be unique within a server.
         /// </remarks>
-        public string ChannelId { get; }
+        public string ChannelId { get; private set; }
 
         /// <summary>
         ///     Assign a socket to this channel

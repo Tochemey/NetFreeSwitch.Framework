@@ -28,14 +28,22 @@ namespace Networking.Demo {
             ApiResponse response = client.SendApi(command).Result;
             if (response == null) Log.Info("No gateways available");
             else if (string.IsNullOrEmpty(response.Body)) Log.Info("No gateways available");
-            else {
+            else
+            {
                 List<string> gws = response.Body.Split().ToList();
                 if (gws != null
-                    && gws.Any()) {
+                    && gws.Any())
+                {
                     var counter = 1;
                     foreach (var gw in gws) Log.Info("Gateway no {0} : {1}", counter++, gw);
                 }
             }
+
+            command = new ApiCommand("sofia status");
+            response = client.SendApi(command).Result;
+            Log.Info("sofia status :\n");
+            Log.Info("\n\n" + response.Body);
+
 
             Console.ReadKey();
         }

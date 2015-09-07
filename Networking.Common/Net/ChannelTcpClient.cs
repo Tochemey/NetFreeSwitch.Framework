@@ -176,16 +176,15 @@ namespace Networking.Common.Net {
         public async Task ConnectAsync(IPAddress address, int port, TimeSpan timeout) {
             if (_socket != null)
                 throw new InvalidOperationException("Socket is already connected");
-
             EnsureChannel();
-
             _socket = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
+            _socket.SetSocketOption(SocketOptionLevel.Tcp, SocketOptionName.NoDelay, 1);
+            _socket.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.Linger, new LingerOption(true, 1));
+
             _args.RemoteEndPoint = new IPEndPoint(address, port);
             var isPending = _socket.ConnectAsync(_args);
-
             if (!isPending)
                 return;
-
             await _connectSemaphore.WaitAsync(timeout);
         }
 

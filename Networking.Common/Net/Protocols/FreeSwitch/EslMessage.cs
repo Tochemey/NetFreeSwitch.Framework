@@ -9,6 +9,8 @@ namespace Networking.Common.Net.Protocols.FreeSwitch {
     public class EslMessage {
         private readonly string _originalMessage;
 
+        public EslMessage() { }
+
         public EslMessage(string origMessage) {
             Items = new Dictionary<string, string>();
             _originalMessage = origMessage;
@@ -18,8 +20,8 @@ namespace Networking.Common.Net.Protocols.FreeSwitch {
             _originalMessage = origMessage;
             Items = new Dictionary<string, string>();
             foreach (var k in data.AllKeys) {
-                if(!Items.ContainsKey(k))
-                Items.Add(k, data[k]);
+                if (!Items.ContainsKey(k))
+                    Items.Add(k, data[k]);
             }
         }
 
