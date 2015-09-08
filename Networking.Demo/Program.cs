@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
+using Networking.Common.Net.Protocols.FreeSwitch;
 using Networking.Common.Net.Protocols.FreeSwitch.Command;
 using Networking.Common.Net.Protocols.FreeSwitch.Message;
 using Networking.Common.Net.Protocols.FreeSwitch.Outbound;
@@ -44,6 +45,14 @@ namespace Networking.Demo {
             Log.Info("sofia status :\n");
             Log.Info("\n\n" + response.Body);
 
+
+            EslLogLevels levels = EslLogLevels.INFO;
+            client.SetLogLevel(levels);
+
+            client.CloseAsync();
+
+            Log.Info("Connection Status {0}", client.Connected);
+            Log.Info("Authentication Status {0}", client.Authenticated);
 
             Console.ReadKey();
         }

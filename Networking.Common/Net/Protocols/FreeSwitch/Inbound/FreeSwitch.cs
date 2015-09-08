@@ -2,130 +2,30 @@
 using System.Collections.Concurrent;
 using System.Linq;
 using System.Net;
-using System.Net.Sockets;
 using System.Threading;
 using System.Threading.Tasks;
-using Networking.Common.Net.Buffers;
 using Networking.Common.Net.Channels;
 using Networking.Common.Net.Protocols.FreeSwitch.Command;
 using Networking.Common.Net.Protocols.FreeSwitch.Events;
 using Networking.Common.Net.Protocols.FreeSwitch.Message;
 
-namespace Networking.Common.Net.Protocols.FreeSwitch.Outbound {
+namespace Networking.Common.Net.Protocols.FreeSwitch.Inbound {
     /// <summary>
-    ///     Connects to FreeSwitch and execute commands.
+    ///     Represent a FreeSwitch node connection
     /// </summary>
-    public class FreeSwitchClient : IDisposable {
-        private static bool _authenticated;
-        private readonly SocketAsyncEventArgs _args = new SocketAsyncEventArgs();
-        private readonly SemaphoreSlim _connectSemaphore = new SemaphoreSlim(0, 1);
+    public class FreeSwitch : IDisposable {
+        private readonly ITcpChannel _channel;
         private readonly ConcurrentQueue<object> _readItems = new ConcurrentQueue<object>();
         private readonly SemaphoreSlim _readSemaphore = new SemaphoreSlim(0, 1);
         private readonly ConcurrentQueue<CommandAsyncEvent> _requestsQueue;
         private readonly SemaphoreSlim _sendCompletedSemaphore = new SemaphoreSlim(0, 1);
         private readonly SemaphoreSlim _sendQueueSemaphore = new SemaphoreSlim(1, 1);
-        private TcpChannel _channel;
-        private Exception _connectException;
         private Exception _sendException;
-        private Socket _socket;
 
-        /// <summary>
-        ///     This constructor sets user defined values to connect to FreeSwitch.
-        /// </summary>
-        /// <param name="address">FreeSwitch mod_event_socket IP address or hostname</param>
-        /// <param name="port">FreeSwitch mod_event_socket Port number</param>
-        /// <param name="messageEncoder">FreeSwitch message encoder</param>
-        /// <param name="messageDecoder">FreeSwitch message decoder</param>
-        /// <param name="freeSwitchEventFilter">FreeSwitch event filters</param>
-        /// <param name="connectionTimeout">Connection Timeout</param>
-        /// <param name="password">FreeSwitch mod_event_socket Password</param>
-        public FreeSwitchClient(string address, int port, IMessageEncoder messageEncoder, IMessageDecoder messageDecoder, string freeSwitchEventFilter, TimeSpan connectionTimeout, string password) {
-            Address = address;
-            Port = port;
-            MessageEncoder = messageEncoder;
-            MessageDecoder = messageDecoder;
-            FreeSwitchEventFilter = freeSwitchEventFilter;
-            ConnectionTimeout = connectionTimeout;
-            Password = password;
-            _authenticated = false;
+        public FreeSwitch(ITcpChannel channel) {
+            _channel = channel;
             _requestsQueue = new ConcurrentQueue<CommandAsyncEvent>();
-            _channel = new TcpChannel(new BufferSlice(new byte[65535], 0, 65535), MessageEncoder, MessageDecoder) {
-                MessageReceived = OnMessageReceived
-            };
-            _channel.Disconnected += OnDisconnect;
-            _channel.MessageSent = OnSendCompleted;
-            _args.Completed += OnConnect;
-        }
-
-        /// <summary>
-        ///     This constructor sets user defined values to connect to FreeSwitch using in-built message encoder/decoders
-        /// </summary>
-        /// <param name="address">FreeSwitch mod_event_socket IP address or hostname</param>
-        /// <param name="port">FreeSwitch mod_event_socket Port number</param>
-        /// <param name="connectionTimeout">Connection Timeout</param>
-        /// <param name="password">FreeSwitch mod_event_socket Password</param>
-        public FreeSwitchClient(string address, int port, TimeSpan connectionTimeout, string password) {
-            Address = address;
-            Port = port;
-            ConnectionTimeout = connectionTimeout;
-            Password = password;
-            MessageEncoder = new FreeSwitchEncoder();
-            MessageDecoder = new FreeSwitchDecoder();
-            FreeSwitchEventFilter = "plain ALL";
-            _authenticated = false;
-            _requestsQueue = new ConcurrentQueue<CommandAsyncEvent>();
-            _channel = new TcpChannel(new BufferSlice(new byte[65535], 0, 65535), MessageEncoder, MessageDecoder) {
-                MessageReceived = OnMessageReceived
-            };
-            _channel.Disconnected += OnDisconnect;
-            _channel.MessageSent = OnSendCompleted;
-            _args.Completed += OnConnect;
-        }
-
-        /// <summary>
-        ///     This constructor sets user defined values to connect to FreeSwitch using in-built message encoder/decoders.
-        ///     The connection timeout is set to zero
-        /// </summary>
-        /// <param name="address">FreeSwitch mod_event_socket IP address or hostname</param>
-        /// <param name="port">FreeSwitch mod_event_socket Port number</param>
-        /// <param name="password">FreeSwitch mod_event_socket Password</param>
-        public FreeSwitchClient(string address, int port, string password) {
-            Address = address;
-            Port = port;
-            ConnectionTimeout = TimeSpan.Zero;
-            Password = password;
-            MessageEncoder = new FreeSwitchEncoder();
-            MessageDecoder = new FreeSwitchDecoder();
-            FreeSwitchEventFilter = "plain ALL";
-            _authenticated = false;
-            _requestsQueue = new ConcurrentQueue<CommandAsyncEvent>();
-            _channel = new TcpChannel(new BufferSlice(new byte[65535], 0, 65535), MessageEncoder, MessageDecoder) {
-                MessageReceived = OnMessageReceived
-            };
-            _channel.Disconnected += OnDisconnect;
-            _channel.MessageSent = OnSendCompleted;
-            _args.Completed += OnConnect;
-        }
-
-        /// <summary>
-        ///     Default constructor. It uses the default FreeSwitch mod_event_socket settings for connectivity
-        /// </summary>
-        public FreeSwitchClient() {
-            Address = "127.0.0.1";
-            Port = 8021;
-            ConnectionTimeout = TimeSpan.Zero;
-            Password = "ClueCon";
-            MessageEncoder = new FreeSwitchEncoder();
-            MessageDecoder = new FreeSwitchDecoder();
-            FreeSwitchEventFilter = "plain ALL";
-            _authenticated = false;
-            _requestsQueue = new ConcurrentQueue<CommandAsyncEvent>();
-            _channel = new TcpChannel(new BufferSlice(new byte[65535], 0, 65535), MessageEncoder, MessageDecoder) {
-                MessageReceived = OnMessageReceived
-            };
-            _channel.Disconnected += OnDisconnect;
-            _channel.MessageSent = OnSendCompleted;
-            _args.Completed += OnConnect;
+            MessageReceived = OnMessageReceived;
         }
 
         public event EventHandler<EslEventArgs> OnBackgroundJob = delegate { };
@@ -171,14 +71,9 @@ namespace Networking.Common.Net.Protocols.FreeSwitch.Outbound {
         public event EventHandler<EslUnhandledMessageEventArgs> OnUnhandledMessage = delegate { };
 
         /// <summary>
-        ///     Event Socket Address
+        ///     Can be compared with a session in a web server.
         /// </summary>
-        public string Address { get; private set; }
-
-        /// <summary>
-        ///     Authentication State
-        /// </summary>
-        public bool Authenticated { get { return _authenticated; } set { _authenticated = value; } }
+        public IChannelData ChannelData { get { return _channel.Data; } }
 
         /// <summary>
         ///     Connection State
@@ -186,68 +81,14 @@ namespace Networking.Common.Net.Protocols.FreeSwitch.Outbound {
         public bool Connected { get { return _channel != null && _channel.IsConnected; } }
 
         /// <summary>
-        ///     Connection Timeout
+        ///     Channel received a new message
         /// </summary>
-        public TimeSpan ConnectionTimeout { get; private set; }
+        public MessageHandler MessageReceived { get; private set; }
 
         /// <summary>
-        ///     FreeSwitch Events Filter
+        ///     Address to the currently connected client.
         /// </summary>
-        public string FreeSwitchEventFilter { get; private set; }
-
-        /// <summary>
-        ///     FreeSwitch Message Decoder
-        /// </summary>
-        public IMessageDecoder MessageDecoder { get; private set; }
-
-        /// <summary>
-        ///     FreeSwich Message Encoder
-        /// </summary>
-        public IMessageEncoder MessageEncoder { get; private set; }
-
-        /// <summary>
-        ///     Event Socket Password
-        /// </summary>
-        public string Password { get; private set; }
-
-        /// <summary>
-        ///     Event Socket Port
-        /// </summary>
-        public int Port { get; private set; }
-
-        /// <summary>
-        ///     Disconnect from FreeSwitch mod_event_socket
-        /// </summary>
-        /// <returns></returns>
-        /// <summary>
-        ///     Wait for all messages to be sent and close the connection
-        /// </summary>
-        /// <returns>Async task</returns>
-        public async Task CloseAsync() {
-            await ShutdownGracefully();
-            await _channel.CloseAsync();
-            _channel = null;
-        }
-
-        /// <summary>
-        ///     ConnectAsync().
-        ///     It used to connect to FreeSwitch mod_event_socket as a client.
-        /// </summary>
-        /// <returns>Async task</returns>
-        public async Task ConnectAsync() {
-            if (_socket != null)
-                throw new InvalidOperationException("Socket is already connected");
-            _socket = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
-            _socket.SetSocketOption(SocketOptionLevel.Tcp, SocketOptionName.NoDelay, 1);
-            _socket.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.Linger, new LingerOption(true, 1));
-            _args.RemoteEndPoint = new IPEndPoint(IPAddress.Parse(Address), Port);
-            var isPending = _socket.ConnectAsync(_args);
-            if (!isPending)
-                return;
-            await _connectSemaphore.WaitAsync(ConnectionTimeout);
-            if (_connectException != null)
-                throw _connectException;
-        }
+        public EndPoint RemoteEndPoint { get { return _channel.RemoteEndpoint; } }
 
         /// <summary>
         ///     Dispose()
@@ -256,7 +97,6 @@ namespace Networking.Common.Net.Protocols.FreeSwitch.Outbound {
             if (_channel == null)
                 return;
             _channel.Close();
-            _channel = null;
         }
 
         /// <summary>
@@ -266,8 +106,7 @@ namespace Networking.Common.Net.Protocols.FreeSwitch.Outbound {
         /// <param name="command">The command to send</param>
         /// <returns>CommandReply response</returns>
         public async Task<CommandReply> Send(BaseCommand command) {
-            if (!Connected
-                || !Authenticated)
+            if (!Connected)
                 return null;
             // Send command
             EnqueueCommand(command);
@@ -290,8 +129,7 @@ namespace Networking.Common.Net.Protocols.FreeSwitch.Outbound {
         /// <param name="command"></param>
         /// <returns>ApiResponse response</returns>
         public async Task<ApiResponse> SendApi(ApiCommand command) {
-            if (!Connected
-                || !Authenticated)
+            if (!Connected)
                 return null;
             // Send the command
             EnqueueCommand(command);
@@ -314,8 +152,7 @@ namespace Networking.Common.Net.Protocols.FreeSwitch.Outbound {
         /// <param name="command">The command to send</param>
         /// <returns>Job ID</returns>
         public async Task<Guid> SendBgApi(BgApiCommand command) {
-            if (!Connected
-                || !Authenticated)
+            if (!Connected)
                 return Guid.Empty;
             // Send command
             var reply = await Send(command);
@@ -345,45 +182,6 @@ namespace Networking.Common.Net.Protocols.FreeSwitch.Outbound {
             // Let us send exit command to FreeSwitch
             ExitCommand exit = new ExitCommand();
             await SendAsync(exit);
-        }
-
-        /// <summary>
-        ///     SubscribeToEvents()
-        ///     It is used to subscribe to FreeSwitch events. Returns true when successful.
-        /// </summary>
-        /// <returns>boolean</returns>
-        public async Task<bool> SubscribeToEvents() {
-            if (!Connected
-                || !Authenticated)
-                return false;
-            var command = new EventCommand(FreeSwitchEventFilter);
-            var reply = await Send(command);
-            return reply != null && reply.IsSuccessful;
-        }
-
-        /// <summary>
-        ///     Authenticate().
-        ///     It helps to send auth command to FreeSwitch using the provided password.
-        /// </summary>
-        /// <returns>Async task</returns>
-        protected async Task Authenticate() {
-            var command = new AuthCommand(Password);
-            // Send the command
-            EnqueueCommand(command);
-            await SendAsync(command);
-            await _readSemaphore.WaitAsync(TimeSpan.FromMilliseconds(-1), CancellationToken.None);
-            object item;
-            var gotItem = _readItems.TryDequeue(out item);
-            if (!gotItem)
-                throw new ChannelException("Was signalled that something have been recieved, but found nothing in the in queue");
-            // signal so that more items can be read directly
-            if (_readItems.Count > 0)
-                _readSemaphore.Release();
-            var response = await ValidateResponse(command, item as EslMessage) as CommandReply;
-            if (response == null) await CloseAsync();
-            if (!response.IsSuccessful) await CloseAsync();
-            _authenticated = true;
-            if (!string.IsNullOrEmpty(FreeSwitchEventFilter)) await SubscribeToEvents();
         }
 
         /// <summary>
@@ -579,89 +377,46 @@ namespace Networking.Common.Net.Protocols.FreeSwitch.Outbound {
             return await event2.Task;
         }
 
-        /// <summary>
-        ///     Connection event handler
-        /// </summary>
-        /// <param name="sender"></param>
-        /// <param name="e"></param>
-        private void OnConnect(object sender, SocketAsyncEventArgs e) {
-            if (e.SocketError != SocketError.Success) {
-                _connectException = new SocketException((int) e.SocketError);
-                _socket = null;
-            }
-            else
-                _channel.Assign(_socket);
-            _connectSemaphore.Release();
-        }
-
-        /// <summary>
-        ///     Disconnection event handler
-        /// </summary>
-        /// <param name="arg1"></param>
-        /// <param name="arg2"></param>
-        private void OnDisconnect(ITcpChannel arg1, Exception arg2) {
-            _socket = null;
-            if (_sendCompletedSemaphore.CurrentCount == 0) {
-                _sendException = arg2;
-                _sendCompletedSemaphore.Release();
-            }
-            if (_readSemaphore.CurrentCount != 0) return;
-            _readItems.Enqueue(new ChannelException("Socket got disconnected", arg2));
-            _readSemaphore.Release();
-        }
-
-        /// <summary>
-        ///     Fired when a decoded message is received by the channel.
-        /// </summary>
-        /// <param name="channel">Receiving channel</param>
-        /// <param name="message">Decoded message received</param>
-        private async void OnMessageReceived(ITcpChannel channel, object message) {
-            var decodedMessage = message as EslDecodedMessage;
-            // Handle decoded message.
-            if (decodedMessage == null) return;
-            if (decodedMessage.Headers == null
-                || !decodedMessage.Headers.HasKeys()) return;
-            var headers = decodedMessage.Headers;
-            var contentType = headers["Content-Type"];
-            if (string.IsNullOrEmpty(contentType)) return;
-            contentType = contentType.ToLowerInvariant();
-            switch (contentType) {
-                case "auth/request":
-                    await Authenticate();
-                    break;
-                case "command/reply":
-                    var reply = new CommandReply(headers, decodedMessage.OriginalMessage);
-                    _readItems.Enqueue(reply);
-                    if (_readSemaphore.CurrentCount == 0)
-                        _readSemaphore.Release();
-                    break;
-                case "api/response":
-                    var apiResponse = new ApiResponse(decodedMessage.BodyText);
-                    _readItems.Enqueue(apiResponse);
-                    if (_readSemaphore.CurrentCount == 0)
-                        _readSemaphore.Release();
-                    break;
-                case "text/event-plain":
-                    var parameters = decodedMessage.BodyLines.AllKeys.ToDictionary(key => key, key => decodedMessage.BodyLines[key]);
-                    var @event = new EslEvent(parameters);
-                    PopEvent(@event);
-                    break;
-                case "log/data":
-                    var logdata = new LogData(headers, decodedMessage.BodyText);
-                    break;
-                default:
-                    // Here we are handling an unknown message
-                    var msg = new EslMessage(decodedMessage.Headers, decodedMessage.OriginalMessage);
-                    if (OnUnhandledMessage != null) OnUnhandledMessage(this, new EslUnhandledMessageEventArgs(msg));
-                    break;
+        private void OnMessageReceived(ITcpChannel channel, object message) {
+            if (channel.ChannelId.Equals(_channel.ChannelId)) {
+                var decodedMessage = message as EslDecodedMessage;
+                // Handle decoded message.
+                if (decodedMessage == null) return;
+                if (decodedMessage.Headers == null
+                    || !decodedMessage.Headers.HasKeys())
+                    return;
+                var headers = decodedMessage.Headers;
+                var contentType = headers["Content-Type"];
+                if (string.IsNullOrEmpty(contentType)) return;
+                contentType = contentType.ToLowerInvariant();
+                switch (contentType) {
+                    case "command/reply":
+                        var reply = new CommandReply(headers, decodedMessage.OriginalMessage);
+                        _readItems.Enqueue(reply);
+                        if (_readSemaphore.CurrentCount == 0)
+                            _readSemaphore.Release();
+                        break;
+                    case "api/response":
+                        var apiResponse = new ApiResponse(decodedMessage.BodyText);
+                        _readItems.Enqueue(apiResponse);
+                        if (_readSemaphore.CurrentCount == 0)
+                            _readSemaphore.Release();
+                        break;
+                    case "text/event-plain":
+                        var parameters = decodedMessage.BodyLines.AllKeys.ToDictionary(key => key, key => decodedMessage.BodyLines[key]);
+                        var @event = new EslEvent(parameters);
+                        PopEvent(@event);
+                        break;
+                    case "log/data":
+                        var logdata = new LogData(headers, decodedMessage.BodyText);
+                        break;
+                    default:
+                        // Here we are handling an unknown message
+                        var msg = new EslMessage(decodedMessage.Headers, decodedMessage.OriginalMessage);
+                        if (OnUnhandledMessage != null) OnUnhandledMessage(this, new EslUnhandledMessageEventArgs(msg));
+                        break;
+                }
             }
         }
-
-        /// <summary>
-        ///     Completed Send request event handler. Good for logging.
-        /// </summary>
-        /// <param name="channel">the Tcp channel used to send the request</param>
-        /// <param name="sentMessage">the message sent</param>
-        private void OnSendCompleted(ITcpChannel channel, object sentMessage) { _sendCompletedSemaphore.Release(); }
     }
 }

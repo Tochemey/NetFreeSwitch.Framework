@@ -142,6 +142,7 @@
     <Compile Include="Net\Protocols\FreeSwitch\ChannelDirection.cs" />
     <Compile Include="Net\Protocols\FreeSwitch\ChannelState.cs" />
     <Compile Include="Net\Protocols\FreeSwitch\CommandAsyncEvent.cs" />
+    <Compile Include="Net\Protocols\FreeSwitch\Command\LogCommand.cs" />
     <Compile Include="Net\Protocols\FreeSwitch\DateTimeExtension.cs" />
     <Compile Include="Net\Protocols\FreeSwitch\EslChannelState.cs" />
     <Compile Include="Net\Protocols\FreeSwitch\Command\ApiCommand.cs" />
@@ -168,6 +169,7 @@
     <Compile Include="Net\Protocols\FreeSwitch\EslEventType.cs" />
     <Compile Include="Net\Protocols\FreeSwitch\EslLogLevels.cs" />
     <Compile Include="Net\Protocols\FreeSwitch\EslMessage.cs" />
+    <Compile Include="Net\Protocols\FreeSwitch\EslUnhandledMessageEventArgs.cs" />
     <Compile Include="Net\Protocols\FreeSwitch\EventsListenInfo.cs" />
     <Compile Include="Net\Protocols\FreeSwitch\Events\BackgroundJob.cs" />
     <Compile Include="Net\Protocols\FreeSwitch\Events\CallUpdate.cs" />
@@ -190,9 +192,14 @@
     <Compile Include="Net\Protocols\FreeSwitch\EslEventList.cs" />
     <Compile Include="Net\Protocols\FreeSwitch\EslHangupCause.cs" />
     <Compile Include="Net\Protocols\FreeSwitch\EslStringReader.cs" />
+    <Compile Include="Net\Protocols\FreeSwitch\Inbound\FreeSwitch.cs" />
+    <Compile Include="Net\Protocols\FreeSwitch\Inbound\FreeSwitchListener.cs" />
+    <Compile Include="Net\Protocols\FreeSwitch\Inbound\FreeSwitchServer.cs" />
+    <Compile Include="Net\Protocols\FreeSwitch\Inbound\IContextData.cs" />
     <Compile Include="Net\Protocols\FreeSwitch\Message\ApiResponse.cs" />
     <Compile Include="Net\Protocols\FreeSwitch\Message\AuthRequest.cs" />
     <Compile Include="Net\Protocols\FreeSwitch\Message\CommandReply.cs" />
+    <Compile Include="Net\Protocols\FreeSwitch\Message\LogData.cs" />
     <Compile Include="Net\Protocols\FreeSwitch\Outbound\FreeSwitchClient.cs" />
     <Compile Include="Net\Protocols\FreeSwitch\SequenceGenerator.cs" />
     <Compile Include="Net\Protocols\FreeSwitch\StringExtension.cs" />

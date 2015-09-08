@@ -8,15 +8,15 @@ namespace Networking.Common.Net.Protocols.FreeSwitch.Message {
         /// <summary>
         ///     Constructor to set the original message
         /// </summary>
-        /// <param name="origMessage">Original message</param>
-        public CommandReply(string origMessage) : base(origMessage) { }
+        /// <param name="apiResponseMessage">Original message</param>
+        public CommandReply(string apiResponseMessage) : base(apiResponseMessage) { }
 
         /// <summary>
         ///     Constructor to set the decoded message and the original message
         /// </summary>
         /// <param name="data">Data</param>
-        /// <param name="origMessage">Original message</param>
-        public CommandReply(NameValueCollection data, string origMessage) : base(data, origMessage) { }
+        /// <param name="rawMessage">Original message</param>
+        public CommandReply(NameValueCollection data, string rawMessage) : base(data, rawMessage) { }
 
         /// <summary>
         ///     Command Reply Text

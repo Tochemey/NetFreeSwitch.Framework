@@ -8,9 +8,9 @@ namespace Networking.Common.Net.Protocols.FreeSwitch.Message {
         /// <summary>
         ///     ApiResponse body
         /// </summary>
-        public string Body { get { return OriginalMessage; } }
+        public string Body { get { return RawMessage; } }
 
-        public ApiResponse(string origMessage) : base(origMessage) { }
-        public ApiResponse(NameValueCollection data, string origMessage) : base(data, origMessage) { }
+        public ApiResponse(string message) : base(message) { }
+        public ApiResponse(NameValueCollection data, string rawMessage) : base(data, rawMessage) { }
     }
 }

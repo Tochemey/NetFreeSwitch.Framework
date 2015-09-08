@@ -4,7 +4,6 @@
         SESSION_DISCONNECT,
         COMMAND_REPLY,
         API_RESPONSE,
-        INVALID_MESSAGE,
         UN_HANDLED_EVENT,
         UN_HANDLED_MESSAGE,
         ERROR,

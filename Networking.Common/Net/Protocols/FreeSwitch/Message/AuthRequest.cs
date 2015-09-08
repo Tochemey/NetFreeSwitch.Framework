@@ -8,9 +8,9 @@ namespace Networking.Common.Net.Protocols.FreeSwitch.Message {
         /// <summary>
         ///     Authentication request
         /// </summary>
-        public string Request { get { return OriginalMessage; } }
+        public string Request { get { return RawMessage; } }
 
-        public AuthRequest(string origMessage) : base(origMessage) { }
-        public AuthRequest(NameValueCollection data, string origMessage) : base(data, origMessage) { }
+        public AuthRequest(string apiResponseMessage) : base(apiResponseMessage) { }
+        public AuthRequest(NameValueCollection data, string rawMessage) : base(data, rawMessage) { }
     }
 }

@@ -7,17 +7,20 @@ namespace Networking.Common.Net.Protocols.FreeSwitch {
     ///     FreeSwitch Message wrapper
     /// </summary>
     public class EslMessage {
-        private readonly string _originalMessage;
+        private readonly string _rawMessage;
 
-        public EslMessage() { }
-
-        public EslMessage(string origMessage) {
+        public EslMessage() {
             Items = new Dictionary<string, string>();
-            _originalMessage = origMessage;
+            _rawMessage = string.Empty;
         }
 
-        public EslMessage(NameValueCollection data, string origMessage) {
-            _originalMessage = origMessage;
+        public EslMessage(string message) {
+            Items = new Dictionary<string, string>();
+            _rawMessage = message;
+        }
+
+        public EslMessage(NameValueCollection data, string rawMessage) {
+            _rawMessage = rawMessage;
             Items = new Dictionary<string, string>();
             foreach (var k in data.AllKeys) {
                 if (!Items.ContainsKey(k))
@@ -29,7 +32,7 @@ namespace Networking.Common.Net.Protocols.FreeSwitch {
 
         public Dictionary<string, string> Items { get; private set; }
 
-        public string OriginalMessage { get { return _originalMessage; } }
+        public string RawMessage { get { return _rawMessage; } }
 
         public string this[string name]
         {
