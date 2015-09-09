@@ -3,6 +3,7 @@ using System.Collections.Concurrent;
 using System.IO;
 using System.Net;
 using System.Net.Sockets;
+using System.Threading.Tasks;
 using Networking.Common.Net.Buffers;
 using Networking.Common.Net.Channels;
 
@@ -179,6 +180,11 @@ namespace Networking.Common.Net.Protocols.FreeSwitch.Inbound {
         /// <summary>
         ///     Stop the listener.
         /// </summary>
-        public virtual void Stop() { _listener.Stop(); }
+        public virtual async void Stop() {
+            // Let us do some cleaning
+            foreach (ITcpChannel tcpChannel in _channels) { await tcpChannel.CloseAsync(); }
+            _channels.Clear();
+            _listener.Stop();
+        }
     }
 }

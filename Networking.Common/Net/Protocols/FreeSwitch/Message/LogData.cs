@@ -9,10 +9,10 @@ namespace Networking.Common.Net.Protocols.FreeSwitch.Message {
         /// <summary>
         ///     ApiResponse body
         /// </summary>
-        public string Body { get { return RawMessage; } }
+        public string Body { get { return Msg; } }
 
         public LogData(string message) : base(message) { }
-        public LogData(NameValueCollection data, string rawMessage) : base(data, rawMessage) { }
+        public LogData(NameValueCollection data, string msg) : base(data, msg) { }
 
         public EslLogLevels? Level
         {

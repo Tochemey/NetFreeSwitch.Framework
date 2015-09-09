@@ -4,7 +4,6 @@ using System.Net;
 using System.Net.Sockets;
 using System.Threading;
 using System.Threading.Tasks;
-using Networking.Common.Net.Authentication;
 using Networking.Common.Net.Buffers;
 using Networking.Common.Net.Channels;
 
@@ -69,11 +68,6 @@ namespace Networking.Common.Net {
         ///     Set certificate if you want to use secure connections.
         /// </summary>
         public ISslStreamBuilder Certificate { get; set; }
-
-        /// <summary>
-        ///     Set if you want to authenticate against a server.
-        /// </summary>
-        public IClientAuthenticator Authenticator { get; set; }
 
         /// <summary>
         ///     Gets if channel is connected
@@ -285,10 +279,6 @@ namespace Networking.Common.Net {
                 _sendException = null;
                 throw new AggregateException(ex);
             }
-            if (Authenticator != null
-                && Authenticator.AuthenticationFailed)
-                throw new AuthenticationDeniedException("Failed to authenticate");
-
             await _sendQueueSemaphore.WaitAsync();
 
             _channel.Send(message);

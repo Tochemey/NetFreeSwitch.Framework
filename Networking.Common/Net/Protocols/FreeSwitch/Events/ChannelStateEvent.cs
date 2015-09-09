@@ -12,7 +12,7 @@ namespace Networking.Common.Net.Protocols.FreeSwitch.Events {
 
         public string AnswerState { get { return this["Answer-State"]; } }
 
-        public ChannelDirection CallDirection { get { return Enumm.Parse<ChannelDirection>(this["Call-Direction"]); } }
+        public EslChannelDirection CallDirection { get { return Enumm.Parse<EslChannelDirection>(this["Call-Direction"]); } }
 
         public ChannelState ChannelState
         {
@@ -32,12 +32,12 @@ namespace Networking.Common.Net.Protocols.FreeSwitch.Events {
             }
         }
 
-        public ChannelDirection PresenceCallDirection
+        public EslChannelDirection PresenceCallDirection
         {
             get
             {
                 string pcd = this["Presence-Call-Direction"];
-                return string.IsNullOrEmpty(pcd) ? ChannelDirection.UNKNOWN : Enumm.Parse<ChannelDirection>(this["Presence-Call-Direction"]);
+                return string.IsNullOrEmpty(pcd) ? EslChannelDirection.UNKNOWN : Enumm.Parse<EslChannelDirection>(this["Presence-Call-Direction"]);
             }
         }
 

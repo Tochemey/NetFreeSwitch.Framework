@@ -23,8 +23,10 @@ namespace Networking.Common.Net.Protocols.FreeSwitch
         /// </remarks>
         /// <exception cref="NotSupportedException">Message is of a type that the encoder cannot handle.</exception>
         public void Prepare(object message) {
-            if (!(message is BaseCommand))
-                throw new InvalidOperationException("This encoder only supports messages deriving from 'BaseCommand'");
+            if (!(message is BaseCommand)) {
+               // throw new InvalidOperationException("This encoder only supports messages deriving from 'BaseCommand'");
+                return;
+            }
             _message = (BaseCommand) message;
 
             string command = _message.ToString();

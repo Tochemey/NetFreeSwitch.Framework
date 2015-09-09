@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Concurrent;
+using System.Collections.Generic;
 using System.Linq;
 using System.Net;
 using System.Threading;
@@ -11,21 +12,30 @@ using Networking.Common.Net.Protocols.FreeSwitch.Message;
 
 namespace Networking.Common.Net.Protocols.FreeSwitch.Inbound {
     /// <summary>
+    ///     ErrorHandler
+    /// </summary>
+    /// <param name="channel"></param>
+    /// <param name="exception"></param>
+    public delegate void ErrorHandler(ITcpChannel channel, Exception exception);
+
+    /// <summary>
     ///     Represent a FreeSwitch node connection
     /// </summary>
-    public class FreeSwitch : IDisposable {
+    public class FreeSwitch : ICallHandler {
         private readonly ITcpChannel _channel;
         private readonly ConcurrentQueue<object> _readItems = new ConcurrentQueue<object>();
         private readonly SemaphoreSlim _readSemaphore = new SemaphoreSlim(0, 1);
         private readonly ConcurrentQueue<CommandAsyncEvent> _requestsQueue;
         private readonly SemaphoreSlim _sendCompletedSemaphore = new SemaphoreSlim(0, 1);
         private readonly SemaphoreSlim _sendQueueSemaphore = new SemaphoreSlim(1, 1);
+        private ConnectedCall _connectedCall;
         private Exception _sendException;
 
         public FreeSwitch(ITcpChannel channel) {
             _channel = channel;
             _requestsQueue = new ConcurrentQueue<CommandAsyncEvent>();
             MessageReceived = OnMessageReceived;
+            Error = OnError;
         }
 
         public event EventHandler<EslEventArgs> OnBackgroundJob = delegate { };
@@ -60,6 +70,8 @@ namespace Networking.Common.Net.Protocols.FreeSwitch.Inbound {
 
         public event EventHandler<EslEventArgs> OnCustom = delegate { };
 
+        public event EventHandler<EslDisconnectNoticeEventArgs> OnDisconnectNotice = delegate { };
+
         public event EventHandler<EslEventArgs> OnDtmf = delegate { };
 
         public event EventHandler<EslEventArgs> OnReceivedUnHandledEvent = delegate { };
@@ -81,6 +93,16 @@ namespace Networking.Common.Net.Protocols.FreeSwitch.Inbound {
         public bool Connected { get { return _channel != null && _channel.IsConnected; } }
 
         /// <summary>
+        ///     Connected Call data
+        /// </summary>
+        public ConnectedCall ConnectedCall { get { return _connectedCall; } }
+
+        /// <summary>
+        ///     Something failed during processing.
+        /// </summary>
+        public ErrorHandler Error { get; private set; }
+
+        /// <summary>
         ///     Channel received a new message
         /// </summary>
         public MessageHandler MessageReceived { get; private set; }
@@ -90,14 +112,83 @@ namespace Networking.Common.Net.Protocols.FreeSwitch.Inbound {
         /// </summary>
         public EndPoint RemoteEndPoint { get { return _channel.RemoteEndpoint; } }
 
+        public async Task<CommandReply> Answer() { return await ExecuteApplication("answer", true); }
+
+        public async Task<CommandReply> BindDigitAction(Guid id, string command, bool eventLock = false) { return await ExecuteApplication("bind_digit_action", command, eventLock); }
+
+        public async Task<CommandReply> Bridge(Guid id, string brigdeText) { return await ExecuteApplication("bridge", brigdeText, false); }
+
         /// <summary>
-        ///     Dispose()
+        ///     Close()
         /// </summary>
-        public void Dispose() {
+        public async Task Close() {
             if (_channel == null)
                 return;
-            _channel.Close();
+            _connectedCall = null;
+            await _channel.CloseAsync();
         }
+
+        /// <summary>
+        ///     Connect(). It is used to get the connected call data.
+        /// </summary>
+        /// <returns>Async Task</returns>
+        public async Task Connect() {
+            ConnectCommand command = new ConnectCommand();
+            CommandReply reply = await Send(command);
+            if (reply != null) {
+                string eventName = reply["Event-Name"];
+                if (!string.IsNullOrEmpty(eventName)
+                    && eventName.Equals("CHANNEL_DATA")) {
+                    var properties = new Dictionary<string, string>();
+                    reply.CopyParameters(ref properties);
+                    _connectedCall = new ConnectedCall(properties);
+                }
+            }
+        }
+
+        /// <summary>
+        ///     DivertEvents(). It is to allow events that an embedded script would expect to get in the inputcallback to be
+        ///     diverted to the event socket.
+        /// </summary>
+        /// <returns></returns>
+        public async Task<bool> DivertEvents() {
+            DivertEventsCommand command = new DivertEventsCommand(true);
+            CommandReply reply = await Send(command);
+            return reply != null && reply.IsSuccessful;
+        }
+
+        public async Task<CommandReply> Hangup(Guid id, string reason) { return await ExecuteApplication("hangup", reason, true); }
+
+        /// <summary>
+        ///     MyEvents(). Receive only events from this channel.
+        /// </summary>
+        /// <returns></returns>
+        public async Task<bool> MyEvents() {
+            Guid guid = Guid.Parse(ConnectedCall.UniqueID);
+            MyEventsCommand command = new MyEventsCommand(guid);
+            CommandReply reply = await Send(command);
+            return reply != null && reply.IsSuccessful;
+        }
+
+        public async Task<CommandReply> PlayAudioFile(Guid id, string filePath, bool eventLock) { return await ExecuteApplication("playback", filePath, eventLock); }
+
+        public async Task<CommandReply> PreAnswer(Guid id) { return await ExecuteApplication("pre_answer", false); }
+
+        public async Task<CommandReply> Record(Guid id, string path, int? timeLimit, int? silenceThreshhold, int? silenceHits, bool eventLock) { return await ExecuteApplication("record", path + " " + (timeLimit.HasValue ? timeLimit.ToString() : "") + " " + (silenceThreshhold.HasValue ? silenceThreshhold.ToString() : "") + " " + (silenceHits.HasValue ? silenceHits.ToString() : ""), eventLock); }
+
+        /// <summary>
+        ///     Resume().
+        /// </summary>
+        /// <returns></returns>
+        public async Task<bool> Resume() {
+            ResumeCommand command = new ResumeCommand();
+            CommandReply reply = await Send(command);
+            return reply != null && reply.IsSuccessful;
+        }
+
+        public async Task<CommandReply> RingReady(bool eventLock) { return await ExecuteApplication("ring_ready", true); }
+
+        public async Task<CommandReply> Say(Guid id, string language, EslSayTypes type, EslSayMethods method, EslSayGenders gender, string text, int loop, bool eventLock) { return await ExecuteApplication("say", language + " " + type + " " + method.ToString().Replace("_", "/") + " " + gender + " " + text, loop, eventLock); }
 
         /// <summary>
         ///     Send().
@@ -163,6 +254,8 @@ namespace Networking.Common.Net.Protocols.FreeSwitch.Inbound {
             return Guid.TryParse(jobId, out jobUuid) ? jobUuid : Guid.Empty;
         }
 
+        public async Task<CommandReply> SetDigitActionRealm(Guid id, string realm, bool eventLock) { return await ExecuteApplication("digit_action_set_realm", (realm ?? "all"), eventLock); }
+
         /// <summary>
         ///     SendLog(). It is used to request for FreeSwitch log.
         /// </summary>
@@ -171,6 +264,18 @@ namespace Networking.Common.Net.Protocols.FreeSwitch.Inbound {
         public async Task SetLogLevel(EslLogLevels level) {
             LogCommand command = new LogCommand(level);
             await SendAsync(command);
+        }
+
+        public async Task<CommandReply> SetVariable(Guid id, string name, string value) {
+            if (string.IsNullOrEmpty(value))
+                return await ExecuteApplication("unset", name, false);
+            return await ExecuteApplication("set", name + "=" + value, false);
+        }
+
+        public async Task<CommandReply> SetVariable(Guid id, string name, string value, bool eventLock) {
+            if (string.IsNullOrEmpty(value))
+                return await ExecuteApplication("unset", name, eventLock);
+            return await ExecuteApplication("set", name + "=" + value, eventLock);
         }
 
         /// <summary>
@@ -183,6 +288,16 @@ namespace Networking.Common.Net.Protocols.FreeSwitch.Inbound {
             ExitCommand exit = new ExitCommand();
             await SendAsync(exit);
         }
+
+        public async Task<CommandReply> Sleep(Guid id, int milliSeconds) { return await ExecuteApplication("sleep", Convert.ToString(milliSeconds), true); }
+
+        public async Task<CommandReply> Sleep(Guid id, int milliSeconds, bool eventLock) { return await ExecuteApplication("sleep", Convert.ToString(milliSeconds), eventLock); }
+
+        public async Task<CommandReply> Speak(Guid id, string engine, string voice, string text, string timerName, int loop, bool eventLock) { return await ExecuteApplication("speak", engine + "|" + voice + "|" + text + (!string.IsNullOrEmpty(timerName) ? "|" + timerName : ""), loop, eventLock); }
+
+        public async Task<CommandReply> StartDtmf(Guid id, bool eventLock) { return await ExecuteApplication("start_dtmf", string.Empty, eventLock); }
+
+        public async Task<CommandReply> StopDtmf(bool eventLock = false) { return await ExecuteApplication("stop_dtmf", eventLock); }
 
         /// <summary>
         ///     Used to dispatch .NET events
@@ -267,6 +382,29 @@ namespace Networking.Common.Net.Protocols.FreeSwitch.Inbound {
             var event2 = new CommandAsyncEvent(command);
             _requestsQueue.Enqueue(event2);
             return event2;
+        }
+
+        /// <summary>
+        ///     Execute an application with arguments against FreeSwitch
+        /// </summary>
+        /// <param name="applicationName">The application name</param>
+        /// <param name="applicationArguments">The application arguments</param>
+        /// <param name="eventLock">Asynchronous status</param>
+        /// <returns></returns>
+        protected async Task<CommandReply> ExecuteApplication(string applicationName, string applicationArguments, bool eventLock) {
+            SendMsgCommand command = new SendMsgCommand(Guid.Parse(ConnectedCall.UniqueID), SendMsgCommand.CALL_COMMAND, applicationName, applicationArguments, eventLock);
+            return await Send(command);
+        }
+
+        /// <summary>
+        ///     Execute an application against FreeSwitch
+        /// </summary>
+        /// <param name="applicationName">The application name</param>
+        /// <param name="eventLock">Asynchronous status</param>
+        /// <returns></returns>
+        protected async Task<CommandReply> ExecuteApplication(string applicationName, bool eventLock) {
+            SendMsgCommand command = new SendMsgCommand(applicationName, string.Empty, eventLock);
+            return await Send(command);
         }
 
         /// <summary>
@@ -377,45 +515,64 @@ namespace Networking.Common.Net.Protocols.FreeSwitch.Inbound {
             return await event2.Task;
         }
 
+        /// <summary>
+        ///     Execute an application against FreeSwitch
+        /// </summary>
+        /// <param name="applicationName">Application name</param>
+        /// <param name="applicationArguments">Application arguments</param>
+        /// <param name="loop">The number of times to execute the app</param>
+        /// <param name="eventLock">Asynchronous state</param>
+        /// <returns>Async CommandReply</returns>
+        private async Task<CommandReply> ExecuteApplication(string applicationName, string applicationArguments, int loop, bool eventLock) {
+            SendMsgCommand command = new SendMsgCommand(Guid.Parse(ConnectedCall.UniqueID), SendMsgCommand.CALL_COMMAND, applicationName, applicationArguments, eventLock, loop);
+            return await Send(command);
+        }
+
+        private void OnError(ITcpChannel channel, Exception exception) { throw new NotImplementedException(); }
+
         private void OnMessageReceived(ITcpChannel channel, object message) {
-            if (channel.ChannelId.Equals(_channel.ChannelId)) {
-                var decodedMessage = message as EslDecodedMessage;
-                // Handle decoded message.
-                if (decodedMessage == null) return;
-                if (decodedMessage.Headers == null
-                    || !decodedMessage.Headers.HasKeys())
-                    return;
-                var headers = decodedMessage.Headers;
-                var contentType = headers["Content-Type"];
-                if (string.IsNullOrEmpty(contentType)) return;
-                contentType = contentType.ToLowerInvariant();
-                switch (contentType) {
-                    case "command/reply":
-                        var reply = new CommandReply(headers, decodedMessage.OriginalMessage);
-                        _readItems.Enqueue(reply);
-                        if (_readSemaphore.CurrentCount == 0)
-                            _readSemaphore.Release();
-                        break;
-                    case "api/response":
-                        var apiResponse = new ApiResponse(decodedMessage.BodyText);
-                        _readItems.Enqueue(apiResponse);
-                        if (_readSemaphore.CurrentCount == 0)
-                            _readSemaphore.Release();
-                        break;
-                    case "text/event-plain":
-                        var parameters = decodedMessage.BodyLines.AllKeys.ToDictionary(key => key, key => decodedMessage.BodyLines[key]);
-                        var @event = new EslEvent(parameters);
-                        PopEvent(@event);
-                        break;
-                    case "log/data":
-                        var logdata = new LogData(headers, decodedMessage.BodyText);
-                        break;
-                    default:
-                        // Here we are handling an unknown message
-                        var msg = new EslMessage(decodedMessage.Headers, decodedMessage.OriginalMessage);
-                        if (OnUnhandledMessage != null) OnUnhandledMessage(this, new EslUnhandledMessageEventArgs(msg));
-                        break;
-                }
+            // Here we validate the channel.
+            if (!channel.ChannelId.Equals(_channel.ChannelId)) return;
+            var decodedMessage = message as EslDecodedMessage;
+            // Handle decoded message.
+            if (decodedMessage == null) return;
+            if (decodedMessage.Headers == null
+                || !decodedMessage.Headers.HasKeys())
+                return;
+            var headers = decodedMessage.Headers;
+            var contentType = headers["Content-Type"];
+            if (string.IsNullOrEmpty(contentType)) return;
+            contentType = contentType.ToLowerInvariant();
+            switch (contentType) {
+                case "command/reply":
+                    var reply = new CommandReply(headers, decodedMessage.OriginalMessage);
+                    _readItems.Enqueue(reply);
+                    if (_readSemaphore.CurrentCount == 0)
+                        _readSemaphore.Release();
+                    break;
+                case "api/response":
+                    var apiResponse = new ApiResponse(decodedMessage.BodyText);
+                    _readItems.Enqueue(apiResponse);
+                    if (_readSemaphore.CurrentCount == 0)
+                        _readSemaphore.Release();
+                    break;
+                case "text/event-plain":
+                    var parameters = decodedMessage.BodyLines.AllKeys.ToDictionary(key => key, key => decodedMessage.BodyLines[key]);
+                    var @event = new EslEvent(parameters);
+                    PopEvent(@event);
+                    break;
+                case "log/data":
+                    var logdata = new LogData(headers, decodedMessage.BodyText);
+                    break;
+                case "text/disconnect-notice":
+                    var notice = new DisconnectNotice(decodedMessage.BodyText);
+                    if (OnDisconnectNotice != null) OnDisconnectNotice(this, new EslDisconnectNoticeEventArgs(notice));
+                    break;
+                default:
+                    // Here we are handling an unknown message
+                    var msg = new EslMessage(decodedMessage.Headers, decodedMessage.OriginalMessage);
+                    if (OnUnhandledMessage != null) OnUnhandledMessage(this, new EslUnhandledMessageEventArgs(msg));
+                    break;
             }
         }
     }

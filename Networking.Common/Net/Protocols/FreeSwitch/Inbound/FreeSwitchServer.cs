@@ -26,16 +26,40 @@ namespace Networking.Common.Net.Protocols.FreeSwitch.Inbound {
 
         public void Start(IPAddress address, int port) { _listener.Start(address, port); }
 
-        private void OnClientConnect(object sender, ClientConnectedEventArgs e) {
+        public void Stop() {
+            _listener.Stop();
+            _clients.Clear();
+        }
+
+        private async void OnClientConnect(object sender, ClientConnectedEventArgs e) {
             ITcpChannel channel = e.Channel;
             FreeSwitch freeSwitch = new FreeSwitch(channel);
+            await freeSwitch.Connect();
+            bool ready = await freeSwitch.Resume() && await freeSwitch.MyEvents() && await freeSwitch.DivertEvents();
+            if (!ready) {
+                await freeSwitch.Close();
+                return;
+            }
             try { _clients.TryAdd(channel.ChannelId, freeSwitch); }
             catch (Exception) {
                 if (channel != null) channel.Close();
             }
         }
 
-        private void OnClientDisconnect(object sender, ClientDisconnectedEventArgs e) { throw new NotImplementedException(); }
+        private void OnClientDisconnect(object sender, ClientDisconnectedEventArgs e) {
+            ITcpChannel channel = e.Channel;
+            Exception exception = e.Exception;
+            FreeSwitch freeSwitch;
+            if (exception != null) {
+                if (_clients.TryGetValue(channel.ChannelId, out freeSwitch)) freeSwitch.Error(channel, exception);
+                return;
+            }
+
+            try { _clients.TryRemove(channel.ChannelId, out freeSwitch); }
+            catch (ArgumentNullException) {
+                // ignored
+            }
+        }
 
         private void OnClientMessage(ITcpChannel channel, object message) {
             // Let us get the actual channel to send the message to
@@ -43,7 +67,9 @@ namespace Networking.Common.Net.Protocols.FreeSwitch.Inbound {
                 FreeSwitch freeSwitch;
                 if (_clients.TryGetValue(channel.ChannelId, out freeSwitch)) freeSwitch.MessageReceived(channel, message);
             }
-            catch (Exception) {}
+            catch (Exception) {
+                // ignored
+            }
         }
     }
 }

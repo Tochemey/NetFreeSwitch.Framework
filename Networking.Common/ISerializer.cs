@@ -2,7 +2,8 @@
 using System.IO;
 using System.Runtime.Serialization;
 
-namespace Networking.Common {
+namespace Networking.Common
+{
     /// <summary>
     ///     Serialize/deserialize an object
     /// </summary>

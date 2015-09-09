@@ -2,7 +2,7 @@
 
 namespace Networking.Common.Net.Protocols.FreeSwitch.Command {
     public abstract class BaseCommand : IEquatable<BaseCommand> {
-        protected BaseCommand() { Sequence = SequenceGenerator.Next(); }
+        protected BaseCommand() { Sequence = GuidFactory.Create().ToString(); }
 
         /// <summary>
         ///     The command name
@@ -27,7 +27,7 @@ namespace Networking.Common.Net.Protocols.FreeSwitch.Command {
         /// <summary>
         ///     Command sequence number
         /// </summary>
-        public int Sequence { private set; get; }
+        public string Sequence { private set; get; }
 
         public bool Equals(BaseCommand other) {
             if (other == null) return false;

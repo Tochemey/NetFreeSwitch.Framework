@@ -15,8 +15,8 @@ namespace Networking.Common.Net.Protocols.FreeSwitch.Message {
         ///     Constructor to set the decoded message and the original message
         /// </summary>
         /// <param name="data">Data</param>
-        /// <param name="rawMessage">Original message</param>
-        public CommandReply(NameValueCollection data, string rawMessage) : base(data, rawMessage) { }
+        /// <param name="msg">Original message</param>
+        public CommandReply(NameValueCollection data, string msg) : base(data, msg) { }
 
         /// <summary>
         ///     Command Reply Text

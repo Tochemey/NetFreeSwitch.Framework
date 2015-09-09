@@ -7,20 +7,20 @@ namespace Networking.Common.Net.Protocols.FreeSwitch {
     ///     FreeSwitch Message wrapper
     /// </summary>
     public class EslMessage {
-        private readonly string _rawMessage;
+        private readonly string _msg;
 
         public EslMessage() {
             Items = new Dictionary<string, string>();
-            _rawMessage = string.Empty;
+            _msg = string.Empty;
         }
 
         public EslMessage(string message) {
             Items = new Dictionary<string, string>();
-            _rawMessage = message;
+            _msg = message;
         }
 
-        public EslMessage(NameValueCollection data, string rawMessage) {
-            _rawMessage = rawMessage;
+        public EslMessage(NameValueCollection data, string msg) {
+            _msg = msg;
             Items = new Dictionary<string, string>();
             foreach (var k in data.AllKeys) {
                 if (!Items.ContainsKey(k))
@@ -32,7 +32,7 @@ namespace Networking.Common.Net.Protocols.FreeSwitch {
 
         public Dictionary<string, string> Items { get; private set; }
 
-        public string RawMessage { get { return _rawMessage; } }
+        public string Msg { get { return _msg; } }
 
         public string this[string name]
         {
@@ -46,7 +46,7 @@ namespace Networking.Common.Net.Protocols.FreeSwitch {
             }
         }
 
-        protected void CopyParameters(ref Dictionary<string, string> parameters) {
+        public void CopyParameters(ref Dictionary<string, string> parameters) {
             foreach (string str in Items.Keys) {
                 if (parameters.ContainsKey(str))
                     parameters.Remove(str);
@@ -54,7 +54,7 @@ namespace Networking.Common.Net.Protocols.FreeSwitch {
             }
         }
 
-        protected void SetParameters(Dictionary<string, string> parameters) {
+        public void SetParameters(Dictionary<string, string> parameters) {
             foreach (string key in parameters.Keys) {
                 if (!Items.ContainsKey(key.Trim()))
                     Items.Add(key.Trim(), parameters[key.Trim()].Trim());

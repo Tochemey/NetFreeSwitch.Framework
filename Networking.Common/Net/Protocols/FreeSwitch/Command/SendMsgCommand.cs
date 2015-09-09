@@ -22,7 +22,7 @@ namespace Networking.Common.Net.Protocols.FreeSwitch.Command {
             _loop = loop;
         }
 
-        public SendMsgCommand(string callCommand, string applicationName, string applicationArgs, int loop, bool eventLock) {
+        public SendMsgCommand(string callCommand, string applicationName, string applicationArgs, bool eventLock, int loop) {
             _applicationName = applicationName;
             _applicationArgs = applicationArgs;
             _loop = loop;
@@ -31,7 +31,7 @@ namespace Networking.Common.Net.Protocols.FreeSwitch.Command {
             _uuid = Guid.Empty;
         }
 
-        public SendMsgCommand(string callCommand, Guid uniqueId, string applicationName, string applicationArgs, bool eventLock) {
+        public SendMsgCommand(Guid uniqueId, string callCommand, string applicationName, string applicationArgs, bool eventLock) {
             _uuid = uniqueId;
             _applicationName = applicationName;
             _applicationArgs = applicationArgs;

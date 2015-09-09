@@ -6,8 +6,6 @@ using System.Net.Sockets;
 using Networking.Common.Net.Buffers;
 using Networking.Common.Net.Channels;
 using Networking.Common.Net.Protocols;
-using Networking.Common.Net.Protocols.MicroMsg;
-using Networking.Common.Net.Protocols.Serializers;
 
 namespace Networking.Common.Net {
     /// <summary>
@@ -29,15 +27,6 @@ namespace Networking.Common.Net {
             if (configuration == null) throw new ArgumentNullException("configuration");
 
             Configure(configuration);
-            ChannelFactory = new TcpChannelFactory();
-        }
-
-        /// <summary>
-        /// </summary>
-        public ChannelTcpListener() {
-            Configure(new ChannelTcpListenerConfiguration(() => new MicroMessageDecoder(new DataContractMessageSerializer()),
-                () => (IMessageEncoder) new MicroMessageEncoder(new DataContractMessageSerializer())));
-
             ChannelFactory = new TcpChannelFactory();
         }
 

@@ -226,6 +226,7 @@ namespace Networking.Common.Net.Protocols.FreeSwitch.Outbound {
         public async Task CloseAsync() {
             await ShutdownGracefully();
             await _channel.CloseAsync();
+            _authenticated = false;
             _channel = null;
         }
 

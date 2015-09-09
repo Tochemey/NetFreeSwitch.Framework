@@ -51,6 +51,7 @@ namespace Networking.Demo {
 
             client.CloseAsync();
 
+            Thread.Sleep(500);
             Log.Info("Connection Status {0}", client.Connected);
             Log.Info("Authentication Status {0}", client.Authenticated);
 
