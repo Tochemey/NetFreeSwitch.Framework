@@ -99,6 +99,9 @@
     <Compile Include="Net\NamespaceDoc.cs" />
     <Compile Include="Net\Protocols\ClientConnectedEventArgs.cs" />
     <Compile Include="Net\Protocols\ClientDisconnectedEventArgs.cs" />
+    <Compile Include="Net\Protocols\FreeSwitch\CallManager\BaseApplication.cs" />
+    <Compile Include="Net\Protocols\FreeSwitch\CallManager\IEndPointAddress.cs" />
+    <Compile Include="Net\Protocols\FreeSwitch\CallManager\OriginateCommand.cs" />
     <Compile Include="Net\Protocols\FreeSwitch\EslBindDigitsEventLegs.cs" />
     <Compile Include="Net\Protocols\FreeSwitch\EslBindDigitTargetLegs.cs" />
     <Compile Include="Net\Protocols\FreeSwitch\EslBroadcastLegs.cs" />
