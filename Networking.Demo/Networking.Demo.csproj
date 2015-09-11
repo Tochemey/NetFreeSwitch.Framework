@@ -61,9 +61,9 @@
     <None Include="packages.config" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\Networking.Common\Networking.Common.csproj">
+    <ProjectReference Include="..\NetFreeSwitch.Framework\NetFreeSwitch.Framework.csproj">
       <Project>{EFCBAC5A-2704-40E9-B15C-3012A94D62F2}</Project>
-      <Name>Networking.Common</Name>
+      <Name>NetFreeSwitch.Framework</Name>
     </ProjectReference>
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />

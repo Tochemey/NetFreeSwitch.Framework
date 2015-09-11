@@ -2,10 +2,10 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
-using Networking.Common.Net.Protocols.FreeSwitch;
-using Networking.Common.Net.Protocols.FreeSwitch.Command;
-using Networking.Common.Net.Protocols.FreeSwitch.Message;
-using Networking.Common.Net.Protocols.FreeSwitch.Outbound;
+using NetFreeSwitch.Framework.FreeSwitch;
+using NetFreeSwitch.Framework.FreeSwitch.Commands;
+using NetFreeSwitch.Framework.FreeSwitch.Messages;
+using NetFreeSwitch.Framework.FreeSwitch.Outbound;
 using NLog;
 
 namespace Networking.Demo {
@@ -14,10 +14,10 @@ namespace Networking.Demo {
         private const string Password = "ClueCon";
         private const int Port = 8021;
         public static Logger Log = LogManager.GetCurrentClassLogger();
-        private static FreeSwitchClient client;
+        private static OutboundChannelSession client;
 
         private static void Main(string[] args) {
-            client = new FreeSwitchClient(Address, Port, Password);
+            client = new OutboundChannelSession(Address, Port, Password);
             client.ConnectAsync();
 
             Thread.Sleep(500);

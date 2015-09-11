@@ -1,0 +1,211 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="14.0" DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <Import Project="$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props" Condition="Exists('$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props')" />
+  <PropertyGroup>
+    <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
+    <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
+    <ProjectGuid>{EFCBAC5A-2704-40E9-B15C-3012A94D62F2}</ProjectGuid>
+    <OutputType>Library</OutputType>
+    <AppDesignerFolder>Properties</AppDesignerFolder>
+    <RootNamespace>NetFreeSwitch.Framework</RootNamespace>
+    <AssemblyName>NetFreeSwitch.Framework</AssemblyName>
+    <TargetFrameworkVersion>v4.5.2</TargetFrameworkVersion>
+    <FileAlignment>512</FileAlignment>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
+    <DebugSymbols>true</DebugSymbols>
+    <DebugType>full</DebugType>
+    <Optimize>false</Optimize>
+    <OutputPath>bin\Debug\</OutputPath>
+    <DefineConstants>DEBUG;TRACE</DefineConstants>
+    <ErrorReport>prompt</ErrorReport>
+    <WarningLevel>4</WarningLevel>
+    <LangVersion>5</LangVersion>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
+    <DebugType>pdbonly</DebugType>
+    <Optimize>true</Optimize>
+    <OutputPath>bin\Release\</OutputPath>
+    <DefineConstants>TRACE</DefineConstants>
+    <ErrorReport>prompt</ErrorReport>
+    <WarningLevel>4</WarningLevel>
+  </PropertyGroup>
+  <ItemGroup>
+    <Reference Include="System" />
+    <Reference Include="System.Configuration" />
+    <Reference Include="System.Core" />
+    <Reference Include="System.Runtime.Serialization" />
+    <Reference Include="System.Xml.Linq" />
+    <Reference Include="System.Data.DataSetExtensions" />
+    <Reference Include="Microsoft.CSharp" />
+    <Reference Include="System.Data" />
+    <Reference Include="System.Net.Http" />
+    <Reference Include="System.Xml" />
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Include="Common\BitConverter2.cs" />
+    <Compile Include="Common\ConstructorExtensions.cs" />
+    <Compile Include="Common\DictionaryExtension.cs" />
+    <Compile Include="Common\GuidFactory.cs" />
+    <Compile Include="Common\InstanceFactory.cs" />
+    <Compile Include="Common\IQueue.cs" />
+    <Compile Include="Common\ISerializer.cs" />
+    <Compile Include="Common\MemoryQueue.cs" />
+    <Compile Include="Common\MethodInfoExtensions.cs" />
+    <Compile Include="Common\NamespaceDoc.cs" />
+    <Compile Include="Common\ObjectExtensions.cs" />
+    <Compile Include="Common\QueueFullException.cs" />
+    <Compile Include="FreeSwitch\CallManager\IEndPointAddress.cs" />
+    <Compile Include="FreeSwitch\CallManager\OriginateApplication.cs" />
+    <Compile Include="FreeSwitch\CallManager\SocketApplication.cs" />
+    <Compile Include="FreeSwitch\CallState.cs" />
+    <Compile Include="FreeSwitch\ChannelErrorEventArgs.cs" />
+    <Compile Include="FreeSwitch\ChannelState.cs" />
+    <Compile Include="FreeSwitch\CommandAsyncEvent.cs" />
+    <Compile Include="FreeSwitch\Commands\ApiCommand.cs" />
+    <Compile Include="FreeSwitch\Commands\AuthCommand.cs" />
+    <Compile Include="FreeSwitch\Commands\BaseCommand.cs" />
+    <Compile Include="FreeSwitch\Commands\BgApiCommand.cs" />
+    <Compile Include="FreeSwitch\Commands\ConnectCommand.cs" />
+    <Compile Include="FreeSwitch\Commands\DivertEventsCommand.cs" />
+    <Compile Include="FreeSwitch\Commands\EventCommand.cs" />
+    <Compile Include="FreeSwitch\Commands\EventsCommand.cs" />
+    <Compile Include="FreeSwitch\Commands\ExitCommand.cs" />
+    <Compile Include="FreeSwitch\Commands\GetVarCommand.cs" />
+    <Compile Include="FreeSwitch\Commands\HangupCommand.cs" />
+    <Compile Include="FreeSwitch\Commands\LogCommand.cs" />
+    <Compile Include="FreeSwitch\Commands\MyEventsCommand.cs" />
+    <Compile Include="FreeSwitch\Commands\NixEventCommand.cs" />
+    <Compile Include="FreeSwitch\Commands\OriginateCommand.cs" />
+    <Compile Include="FreeSwitch\Commands\PlayAndGetDigitsCommand.cs" />
+    <Compile Include="FreeSwitch\Commands\PlaybackCommand.cs" />
+    <Compile Include="FreeSwitch\Commands\ResumeCommand.cs" />
+    <Compile Include="FreeSwitch\Commands\SayCommand.cs" />
+    <Compile Include="FreeSwitch\Commands\SchedApiCommand.cs" />
+    <Compile Include="FreeSwitch\Commands\SendMsgCommand.cs" />
+    <Compile Include="FreeSwitch\Commands\SetVarCommand.cs" />
+    <Compile Include="FreeSwitch\Commands\SpeakCommand.cs" />
+    <Compile Include="FreeSwitch\DateTimeExtension.cs" />
+    <Compile Include="FreeSwitch\Enumm.cs" />
+    <Compile Include="FreeSwitch\EslBindDigitsEventLegs.cs" />
+    <Compile Include="FreeSwitch\EslBindDigitTargetLegs.cs" />
+    <Compile Include="FreeSwitch\EslBroadcastLegs.cs" />
+    <Compile Include="FreeSwitch\EslCallPrivacyTypes.cs" />
+    <Compile Include="FreeSwitch\EslChannelDirection.cs" />
+    <Compile Include="FreeSwitch\EslChannelState.cs" />
+    <Compile Include="FreeSwitch\EslChannelVariable.cs" />
+    <Compile Include="FreeSwitch\EslDecodedMessage.cs" />
+    <Compile Include="FreeSwitch\EslRudeRejectionEventArgs.cs" />
+    <Compile Include="FreeSwitch\EslDisconnectNoticeEventArgs.cs" />
+    <Compile Include="FreeSwitch\EslDtmfQueueDelays.cs" />
+    <Compile Include="FreeSwitch\EslEventArgs.cs" />
+    <Compile Include="FreeSwitch\EslEventList.cs" />
+    <Compile Include="FreeSwitch\EslEventType.cs" />
+    <Compile Include="FreeSwitch\EslHangupCause.cs" />
+    <Compile Include="FreeSwitch\EslLogLevels.cs" />
+    <Compile Include="FreeSwitch\EslMessage.cs" />
+    <Compile Include="FreeSwitch\EslSayGenders.cs" />
+    <Compile Include="FreeSwitch\EslSayMethods.cs" />
+    <Compile Include="FreeSwitch\EslSayTypes.cs" />
+    <Compile Include="FreeSwitch\EslStringReader.cs" />
+    <Compile Include="FreeSwitch\EslUnhandledMessageEventArgs.cs" />
+    <Compile Include="FreeSwitch\EventsListenInfo.cs" />
+    <Compile Include="FreeSwitch\Events\BackgroundJob.cs" />
+    <Compile Include="FreeSwitch\Events\CallUpdate.cs" />
+    <Compile Include="FreeSwitch\Events\ChannelBridge.cs" />
+    <Compile Include="FreeSwitch\Events\ChannelExecute.cs" />
+    <Compile Include="FreeSwitch\Events\ChannelExecuteComplete.cs" />
+    <Compile Include="FreeSwitch\Events\ChannelHangup.cs" />
+    <Compile Include="FreeSwitch\Events\ChannelPark.cs" />
+    <Compile Include="FreeSwitch\Events\ChannelProgress.cs" />
+    <Compile Include="FreeSwitch\Events\ChannelProgressMedia.cs" />
+    <Compile Include="FreeSwitch\Events\ChannelStateEvent.cs" />
+    <Compile Include="FreeSwitch\Events\ChannelUnbridge.cs" />
+    <Compile Include="FreeSwitch\Events\Custom.cs" />
+    <Compile Include="FreeSwitch\Events\Dtmf.cs" />
+    <Compile Include="FreeSwitch\Events\EslEvent.cs" />
+    <Compile Include="FreeSwitch\Events\RecordStop.cs" />
+    <Compile Include="FreeSwitch\Events\SessionHeartbeat.cs" />
+    <Compile Include="FreeSwitch\FreeSwitchDecoder.cs" />
+    <Compile Include="FreeSwitch\FreeSwitchEncoder.cs" />
+    <Compile Include="FreeSwitch\ICallHandler.cs" />
+    <Compile Include="FreeSwitch\Inbound\ConnectedCall.cs" />
+    <Compile Include="FreeSwitch\Inbound\FreeSwitch.cs" />
+    <Compile Include="FreeSwitch\Inbound\FreeSwitchListener.cs" />
+    <Compile Include="FreeSwitch\Inbound\FreeSwitchServer.cs" />
+    <Compile Include="FreeSwitch\Messages\ApiResponse.cs" />
+    <Compile Include="FreeSwitch\Messages\AuthRequest.cs" />
+    <Compile Include="FreeSwitch\Messages\CommandReply.cs" />
+    <Compile Include="FreeSwitch\Messages\RudeRejection.cs" />
+    <Compile Include="FreeSwitch\Messages\DisconnectNotice.cs" />
+    <Compile Include="FreeSwitch\Messages\LogData.cs" />
+    <Compile Include="FreeSwitch\Outbound\OutboundChannelSession.cs" />
+    <Compile Include="FreeSwitch\SequenceGenerator.cs" />
+    <Compile Include="FreeSwitch\StringExtension.cs" />
+    <Compile Include="IO\DirectoryUtils.cs" />
+    <Compile Include="IO\NamespaceDoc.cs" />
+    <Compile Include="IO\OneFilePerItemQueue.cs" />
+    <Compile Include="IO\PersistentCircularIndex.cs" />
+    <Compile Include="IO\PersistentQueue.cs" />
+    <Compile Include="IO\PersistentQueueConfiguration.cs" />
+    <Compile Include="IO\Serializers\BinaryFormatterSerializer.cs" />
+    <Compile Include="Net\Buffers\BufferSlice.cs" />
+    <Compile Include="Net\Buffers\BufferSlicePool.cs" />
+    <Compile Include="Net\Buffers\IBufferSlice.cs" />
+    <Compile Include="Net\Buffers\IBufferSlicePool.cs" />
+    <Compile Include="Net\Buffers\PoolEmptyException.cs" />
+    <Compile Include="Net\ChannelException.cs" />
+    <Compile Include="Net\Channels\BufferPreProcessorHandler.cs" />
+    <Compile Include="Net\Channels\ChannelData.cs" />
+    <Compile Include="Net\Channels\ChannelFailureHandler.cs" />
+    <Compile Include="Net\Channels\ClientCertificate.cs" />
+    <Compile Include="Net\Channels\ClientSideSslStreamBuilder.cs" />
+    <Compile Include="Net\Channels\DisconnectHandler.cs" />
+    <Compile Include="Net\Channels\EmptyEndpoint.cs" />
+    <Compile Include="Net\Channels\IAsyncArgsFactory.cs" />
+    <Compile Include="Net\Channels\IChannelData.cs" />
+    <Compile Include="Net\Channels\ISocketBuffer.cs" />
+    <Compile Include="Net\Channels\ISslStreamBuilder.cs" />
+    <Compile Include="Net\Channels\ITcpChannel.cs" />
+    <Compile Include="Net\Channels\ITcpChannelFactory.cs" />
+    <Compile Include="Net\Channels\MessageHandler.cs" />
+    <Compile Include="Net\Channels\SecureTcpChannel.cs" />
+    <Compile Include="Net\Channels\SecureTcpChannelFactory.cs" />
+    <Compile Include="Net\Channels\ServerSideSslStreamBuilder.cs" />
+    <Compile Include="Net\Channels\SocketAsyncEventArgsWrapper.cs" />
+    <Compile Include="Net\Channels\SocketBuffer.cs" />
+    <Compile Include="Net\Channels\TcpChannel.cs" />
+    <Compile Include="Net\Channels\TcpChannelFactory.cs" />
+    <Compile Include="Net\ChannelTcpClient.cs" />
+    <Compile Include="Net\ChannelTcpListener.cs" />
+    <Compile Include="Net\ChannelTcpListenerConfiguration.cs" />
+    <Compile Include="Net\ClientFilterResult.cs" />
+    <Compile Include="Net\FilterMessageHandler.cs" />
+    <Compile Include="Net\IMessageDecoder.cs" />
+    <Compile Include="Net\IMessageEncoder.cs" />
+    <Compile Include="Net\IMessageQueue.cs" />
+    <Compile Include="Net\MessageQueue.cs" />
+    <Compile Include="Net\NamespaceDoc.cs" />
+    <Compile Include="Net\Protocols\ClientConnectedEventArgs.cs" />
+    <Compile Include="Net\Protocols\ClientDisconnectedEventArgs.cs" />
+    <Compile Include="Net\Protocols\IMessagingListener.cs" />
+    <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="Reflection\ExpressionExtensions.cs" />
+    <Compile Include="Security\IPasswordHasher.cs" />
+    <Compile Include="Security\PasswordHasherRfc2898.cs" />
+    <Compile Include="Common\TypeExtensions.cs" />
+    <Compile Include="Common\WaitHandleExtensions.cs" />
+  </ItemGroup>
+  <ItemGroup />
+  <ItemGroup>
+    <None Include="Net\Channels\ReadMe.md" />
+  </ItemGroup>
+  <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
+  <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
+       Other similar extension points exist, see Microsoft.Common.targets.
+  <Target Name="BeforeBuild">
+  </Target>
+  <Target Name="AfterBuild">
+  </Target>
+  -->
+</Project>
