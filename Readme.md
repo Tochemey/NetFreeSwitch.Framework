@@ -8,8 +8,8 @@ This framework got genesis based upon the marvelous ground work done by Jonas Ga
 
 ## **Features**
 The framework in its current state can be used to interact with FreeSwitch easily in:
-* Inbound mode[Event_Socket_Inbounds](https://freeswitch.org/confluence/display/FREESWITCH/mod_event_socket#mod_event_socket-Inbound)
-* Outbound mode[Event_Socket_Outbound](https://wiki.freeswitch.org/wiki/Event_Socket_Outbound)
+* Inbound mode [Event_Socket_Inbounds](https://freeswitch.org/confluence/display/FREESWITCH/mod_event_socket#mod_event_socket-Inbound)
+* Outbound mode [Event_Socket_Outbound](https://wiki.freeswitch.org/wiki/Event_Socket_Outbound)
 * One good thing it has is that you can implement your own FreeSwitch message encoder and decoder if you do not want to use the built-in ones
 
 ## **License**
