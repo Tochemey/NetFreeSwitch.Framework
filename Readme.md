@@ -18,6 +18,10 @@ The framework in its current state can be used to interact with FreeSwitch easil
 ## **Installation and usage**
 Currently you just need to clone it or download it in your project since it a visual studio project. Also you can copy the files into your project and continue fom there.
 
+Looking at the asynchronous nature of the framework it will be better using it in a event-driven or message-driven architecture. 
+
+**Do not block any method by using Wait() in production. It may hinder performance**
+
 ## **Example**
 ```c#
     using System;
