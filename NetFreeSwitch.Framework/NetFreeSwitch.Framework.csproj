@@ -79,11 +79,13 @@
     <Compile Include="FreeSwitch\Commands\OriginateCommand.cs" />
     <Compile Include="FreeSwitch\Commands\PlayAndGetDigitsCommand.cs" />
     <Compile Include="FreeSwitch\Commands\PlaybackCommand.cs" />
+    <Compile Include="FreeSwitch\Commands\RecordCommand.cs" />
     <Compile Include="FreeSwitch\Commands\ResumeCommand.cs" />
     <Compile Include="FreeSwitch\Commands\SayCommand.cs" />
     <Compile Include="FreeSwitch\Commands\SchedApiCommand.cs" />
     <Compile Include="FreeSwitch\Commands\SendMsgCommand.cs" />
     <Compile Include="FreeSwitch\Commands\SetVarCommand.cs" />
+    <Compile Include="FreeSwitch\Commands\SleepCommand.cs" />
     <Compile Include="FreeSwitch\Commands\SpeakCommand.cs" />
     <Compile Include="FreeSwitch\DateTimeExtension.cs" />
     <Compile Include="FreeSwitch\Enumm.cs" />
