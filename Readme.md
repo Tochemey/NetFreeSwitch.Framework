@@ -4,11 +4,11 @@
 ## **Overview**
 This framework helps interact with the FreeSwitch via its mod_event_socket. For more information about the mod_event_socket refer to [FreeSwitch web site](https://freeswitch.org/confluence/display/FREESWITCH/mod_event_socket). It is a bit different from the previous [library](https://github.com/Tochemey/FreeSwitch.ModEventSocket) I wrote in term of the organisation of the code base and the performance gained while using it. It is fully asynchronous. Also it offers more flexibility for extension by any other developer who picks the source code. 
 
-This framework got genesis based upon the marvelous ground work done by Jonas Gauffin in its [framework](https://github.com/jgauffin/Griffin.Framework).
+In its current state it can help build IVR applications more quickly. 
 
 ## **Features**
 The framework in its current state can be used to interact with FreeSwitch easily in:
-* Inbound mode [Event_Socket_Inbounds](https://freeswitch.org/confluence/display/FREESWITCH/mod_event_socket#mod_event_socket-Inbound)
+* Inbound mode [Event_Socket_Inbound](https://freeswitch.org/confluence/display/FREESWITCH/mod_event_socket#mod_event_socket-Inbound)
 * Outbound mode [Event_Socket_Outbound](https://wiki.freeswitch.org/wiki/Event_Socket_Outbound)
 * One good thing it has is that you can implement your own FreeSwitch message encoder and decoder if you do not want to use the built-in ones
 
@@ -16,7 +16,9 @@ The framework in its current state can be used to interact with FreeSwitch easil
 [Apache License 2.0](http://www.apache.org/licenses/LICENSE-2.0.txt)
 
 ## **Installation and usage**
-Currently you just need to clone it or download it in your project since it a visual studio project. Also you can copy the files into your project and continue fom there.
+Looking at the asynchronous nature of the framework it will be better using it in a event-driven or message-driven architecture. 
+
+**Do not block any method by using Wait() in production. It may hinder performance**
 
 ## **Example**
 ```c#
@@ -32,7 +34,7 @@ Currently you just need to clone it or download it in your project since it a vi
 
     namespace Networking.Demo {
         internal class Program {
-            private const string Address = "192.168.254.246";
+            private const string Address = "127.0.0.1";
             private const string Password = "ClueCon";
             private const int Port = 8021;
             public static Logger Log = LogManager.GetCurrentClassLogger();

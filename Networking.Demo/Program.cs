@@ -10,7 +10,7 @@ using NLog;
 
 namespace Networking.Demo {
     internal class Program {
-        private const string Address = "192.168.254.246";
+        private const string Address = "127.0.0.1";
         private const string Password = "ClueCon";
         private const int Port = 8021;
         public static Logger Log = LogManager.GetCurrentClassLogger();
