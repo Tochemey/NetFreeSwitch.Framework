@@ -61,6 +61,8 @@
     <Compile Include="FreeSwitch\CallState.cs" />
     <Compile Include="FreeSwitch\ChannelErrorEventArgs.cs" />
     <Compile Include="FreeSwitch\ChannelState.cs" />
+    <Compile Include="FreeSwitch\Codecs\FreeSwitchDecoder.cs" />
+    <Compile Include="FreeSwitch\Codecs\FreeSwitchEncoder.cs" />
     <Compile Include="FreeSwitch\CommandAsyncEvent.cs" />
     <Compile Include="FreeSwitch\Commands\ApiCommand.cs" />
     <Compile Include="FreeSwitch\Commands\AuthCommand.cs" />
@@ -128,9 +130,8 @@
     <Compile Include="FreeSwitch\Events\EslEvent.cs" />
     <Compile Include="FreeSwitch\Events\RecordStop.cs" />
     <Compile Include="FreeSwitch\Events\SessionHeartbeat.cs" />
-    <Compile Include="FreeSwitch\FreeSwitchDecoder.cs" />
-    <Compile Include="FreeSwitch\FreeSwitchEncoder.cs" />
     <Compile Include="FreeSwitch\ICallHandler.cs" />
+    <Compile Include="FreeSwitch\InboundClientEventArg.cs" />
     <Compile Include="FreeSwitch\Inbound\ConnectedCall.cs" />
     <Compile Include="FreeSwitch\Inbound\FreeSwitch.cs" />
     <Compile Include="FreeSwitch\Inbound\FreeSwitchListener.cs" />
@@ -199,9 +200,6 @@
     <Compile Include="Common\WaitHandleExtensions.cs" />
   </ItemGroup>
   <ItemGroup />
-  <ItemGroup>
-    <None Include="Net\Channels\ReadMe.md" />
-  </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
        Other similar extension points exist, see Microsoft.Common.targets.

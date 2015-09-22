@@ -23,7 +23,7 @@ using System.Text;
 using NetFreeSwitch.Framework.Net;
 using NetFreeSwitch.Framework.Net.Channels;
 
-namespace NetFreeSwitch.Framework.FreeSwitch {
+namespace NetFreeSwitch.Framework.FreeSwitch.Codecs {
     /// <summary>
     ///     Decode incoming bytes into FreeSwitch Message
     /// </summary>
@@ -32,11 +32,11 @@ namespace NetFreeSwitch.Framework.FreeSwitch {
         private const string EOL = "\r\n";
         private const char LINE_FEED_CHAR = '\n';
 
-        private static int _bytesReceived;
+        private int _bytesReceived;
         private readonly Encoding _encoding = Encoding.ASCII;
         private Action<object> _messageReceived;
-        private static readonly byte[] _buffer = new byte[65535];
-        private static int _offsetInOurBuffer;
+        private readonly byte[] _buffer = new byte[65535];
+        private int _offsetInOurBuffer;
 
         public FreeSwitchDecoder() {
             _messageReceived = o => { };
@@ -48,6 +48,7 @@ namespace NetFreeSwitch.Framework.FreeSwitch {
         /// </summary>
         public void Clear() {
             _bytesReceived = -1;
+            _offsetInOurBuffer = 0;
             Array.Clear(_buffer, 0, _buffer.Length);
         }
 
@@ -57,7 +58,7 @@ namespace NetFreeSwitch.Framework.FreeSwitch {
         /// <param name="buffer"></param>
         public void ProcessReadBytes(ISocketBuffer buffer) {
             // buffer offset received
-            var offsetInSocketBuffer = buffer.Offset;
+            var offsetInSocketBuffer = buffer.Offset;           
 
             // Number of Bytes received
             _bytesReceived = buffer.BytesTransferred;
@@ -65,15 +66,15 @@ namespace NetFreeSwitch.Framework.FreeSwitch {
                 if (_bytesReceived <= 0) break;
                 Buffer.BlockCopy(buffer.Buffer, offsetInSocketBuffer, _buffer, _offsetInOurBuffer, buffer.BytesTransferred);
 
-                string _textReceived = _encoding.GetString(_buffer);
-                _textReceived = _textReceived.TrimStart(LINE_FEED_CHAR).Replace("\0", string.Empty);
-                if (!_textReceived.Contains(MESSAGE_END_STRING)) {
+                string textReceived = _encoding.GetString(_buffer);
+                textReceived = textReceived.TrimStart(LINE_FEED_CHAR).Replace("\0", string.Empty);
+                if (!textReceived.Contains(MESSAGE_END_STRING)) {
                     _offsetInOurBuffer += _bytesReceived;
                     return;
                 }
 
                 int contentLength = 0;
-                string headerLine = _textReceived.Substring(0, _textReceived.IndexOf(MESSAGE_END_STRING, StringComparison.Ordinal));
+                string headerLine = textReceived.Substring(0, textReceived.IndexOf(MESSAGE_END_STRING, StringComparison.Ordinal));
                 var headers = ReadHeaderLines(headerLine);
                 if (headers != null
                     && headers.Count > 0)
@@ -82,25 +83,25 @@ namespace NetFreeSwitch.Framework.FreeSwitch {
                 int len;
                 if (contentLength <= 0) {
                     // Message does not have content length only headers.
-                    var decodedMessage = new EslDecodedMessage(headerLine, string.Empty, _textReceived);
+                    var decodedMessage = new EslDecodedMessage(headerLine, string.Empty, textReceived);
                     MessageReceived(decodedMessage);
                     Clear();
 
                     // Let us check whether there is another message in the buffer sent
-                    _textReceived = _textReceived.Substring(_textReceived.IndexOf(MESSAGE_END_STRING, StringComparison.Ordinal) + MESSAGE_END_STRING.Length);
-                    if (string.IsNullOrEmpty(_textReceived)
-                        || _textReceived.Equals(MESSAGE_END_STRING)
-                        || _textReceived.Equals(EOL)) continue;
+                    textReceived = textReceived.Substring(textReceived.IndexOf(MESSAGE_END_STRING, StringComparison.Ordinal) + MESSAGE_END_STRING.Length);
+                    if (string.IsNullOrEmpty(textReceived)
+                        || textReceived.Equals(MESSAGE_END_STRING)
+                        || textReceived.Equals(EOL)) continue;
                     // Length of extra bytes
-                    len = _encoding.GetByteCount(_textReceived);
-                    _encoding.GetBytes(_textReceived, 0, _textReceived.Length, _buffer, 0);
+                    len = _encoding.GetByteCount(textReceived);
+                    _encoding.GetBytes(textReceived, 0, textReceived.Length, _buffer, 0);
                     _offsetInOurBuffer += len;
                 }
                 else {
                     // Message does have body as well as header.
-                    string bodyLine = _textReceived.Substring(_textReceived.IndexOf(MESSAGE_END_STRING, StringComparison.Ordinal) + MESSAGE_END_STRING.Length);
+                    string bodyLine = textReceived.Substring(textReceived.IndexOf(MESSAGE_END_STRING, StringComparison.Ordinal) + MESSAGE_END_STRING.Length);
                     if (string.IsNullOrEmpty(bodyLine)) {
-                        len = _encoding.GetByteCount(_textReceived);
+                        len = _encoding.GetByteCount(textReceived);
                         // We need to read more bytes for the body    
                         _offsetInOurBuffer += len;
                         return;
@@ -109,7 +110,7 @@ namespace NetFreeSwitch.Framework.FreeSwitch {
                     // body has been read. However there are more to read to make it complete
                     if (bodyLine.Length < contentLength) {
                         // get the count of the received bytes
-                        len = _encoding.GetByteCount(_textReceived);
+                        len = _encoding.GetByteCount(textReceived);
                         // The body is not yet complete we need to read more  
                         _offsetInOurBuffer += len;
                         return;
@@ -117,7 +118,7 @@ namespace NetFreeSwitch.Framework.FreeSwitch {
 
                     // body has been fully read
                     if (contentLength == bodyLine.Length) {
-                        MessageReceived(new EslDecodedMessage(headerLine, bodyLine, _textReceived));
+                        MessageReceived(new EslDecodedMessage(headerLine, bodyLine, textReceived));
                         Clear();
                         return;
                     }
@@ -128,13 +129,13 @@ namespace NetFreeSwitch.Framework.FreeSwitch {
                         MessageReceived(new EslDecodedMessage(headerLine, bodyLine2, headerLine+ bodyLine2));
                         Clear();
 
-                        _textReceived = bodyLine.Remove(bodyLine.IndexOf(bodyLine2, StringComparison.Ordinal), bodyLine2.Length);
-                        if (string.IsNullOrEmpty(_textReceived)
-                            || _textReceived.Equals(MESSAGE_END_STRING)
-                            || _textReceived.Equals(EOL)) return;
+                        textReceived = bodyLine.Remove(bodyLine.IndexOf(bodyLine2, StringComparison.Ordinal), bodyLine2.Length);
+                        if (string.IsNullOrEmpty(textReceived)
+                            || textReceived.Equals(MESSAGE_END_STRING)
+                            || textReceived.Equals(EOL)) return;
                         // Length of extra bytes
-                        len = _encoding.GetByteCount(_textReceived);
-                        _encoding.GetBytes(_textReceived, 0, _textReceived.Length, _buffer, 0);
+                        len = _encoding.GetByteCount(textReceived);
+                        _encoding.GetBytes(textReceived, 0, textReceived.Length, _buffer, 0);
                         _offsetInOurBuffer += len;
                     }
                 }

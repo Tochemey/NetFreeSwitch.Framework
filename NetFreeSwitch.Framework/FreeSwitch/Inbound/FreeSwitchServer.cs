@@ -17,23 +17,29 @@ specific language governing permissions and limitations
 under the License.
 */
 
-using System;
-using System.Collections.Concurrent;
-using System.Net;
 using NetFreeSwitch.Framework.Net;
 using NetFreeSwitch.Framework.Net.Channels;
 using NetFreeSwitch.Framework.Net.Protocols;
+using System;
+using System.Collections.Concurrent;
+using System.Net;
+using NetFreeSwitch.Framework.FreeSwitch.Codecs;
 
-namespace NetFreeSwitch.Framework.FreeSwitch.Inbound {
+namespace NetFreeSwitch.Framework.FreeSwitch.Inbound
+{
     /// <summary>
     /// </summary>
-    public class FreeSwitchServer {
+    public class FreeSwitchServer
+    {
         private readonly ConcurrentDictionary<string, FreeSwitch> _clients = new ConcurrentDictionary<string, FreeSwitch>();
         private readonly FreeSwitchListener _listener;
+        public event EventHandler<InboundClientEventArgs> ClientReady;
 
-        public FreeSwitchServer() {
+        public FreeSwitchServer()
+        {
             var config = new ChannelTcpListenerConfiguration(() => new FreeSwitchDecoder(), () => new FreeSwitchEncoder());
-            _listener = new FreeSwitchListener(config) {
+            _listener = new FreeSwitchListener(config)
+            {
                 MessageReceived = OnClientMessage
             };
             _listener.ClientConnected += OnClientConnect;
@@ -41,54 +47,71 @@ namespace NetFreeSwitch.Framework.FreeSwitch.Inbound {
         }
 
         /// <summary>
-        ///     Port that we got assigned (or specified)
+        /// Port that we got assigned (or specified)
         /// </summary>
         public int LocalPort { get { return _listener.LocalPort; } }
 
-        public void Start(IPAddress address, int port) { _listener.Start(address, port); }
+        public void Start(IPAddress address, int port)
+        {
+            _listener.Start(address, port);
+        }
 
-        public void Stop() {
+        public void Stop()
+        {
             _listener.Stop();
             _clients.Clear();
         }
 
-        private async void OnClientConnect(object sender, ClientConnectedEventArgs e) {
+        private async void OnClientConnect(object sender, ClientConnectedEventArgs e)
+        {
             ITcpChannel channel = e.Channel;
             FreeSwitch freeSwitch = new FreeSwitch(channel);
             await freeSwitch.Connect();
             bool ready = await freeSwitch.Resume() && await freeSwitch.MyEvents() && await freeSwitch.DivertEvents();
-            if (!ready) {
+            if (!ready)
+            {
                 await freeSwitch.Close();
                 return;
             }
-            try { _clients.TryAdd(channel.ChannelId, freeSwitch); }
-            catch (Exception) {
+            try
+            {
+                _clients.TryAdd(channel.ChannelId, freeSwitch);
+                if (ClientReady != null) ClientReady(this, new InboundClientEventArgs(freeSwitch));
+            }
+            catch (Exception)
+            {
                 if (channel != null) channel.Close();
             }
         }
 
-        private void OnClientDisconnect(object sender, ClientDisconnectedEventArgs e) {
+        private void OnClientDisconnect(object sender, ClientDisconnectedEventArgs e)
+        {
             ITcpChannel channel = e.Channel;
             Exception exception = e.Exception;
             FreeSwitch freeSwitch;
-            if (exception != null) {
+            if (exception != null)
+            {
                 if (_clients.TryGetValue(channel.ChannelId, out freeSwitch)) freeSwitch.Error(channel, exception);
                 return;
             }
 
             try { _clients.TryRemove(channel.ChannelId, out freeSwitch); }
-            catch (ArgumentNullException) {
+            catch (ArgumentNullException)
+            {
                 // ignored
             }
         }
 
-        private void OnClientMessage(ITcpChannel channel, object message) {
+        private void OnClientMessage(ITcpChannel channel, object message)
+        {
             // Let us get the actual channel to send the message to
-            try {
+            try
+            {
                 FreeSwitch freeSwitch;
                 if (_clients.TryGetValue(channel.ChannelId, out freeSwitch)) freeSwitch.MessageReceived(channel, message);
             }
-            catch (Exception) {
+            catch (Exception)
+            {
                 // ignored
             }
         }

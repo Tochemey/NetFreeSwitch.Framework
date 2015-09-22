@@ -1,4 +1,4 @@
-/*
+﻿/*
 Licensed to the Apache Software Foundation (ASF) under one
 or more contributor license agreements.  See the NOTICE file
 distributed with this work for additional information
@@ -21,18 +21,12 @@ using System;
 
 namespace NetFreeSwitch.Framework.FreeSwitch
 {
-    public static class Enumm
+    public class InboundClientEventArgs : EventArgs
     {
-        public static T Parse<T>(string name) where T : struct
+        private readonly Inbound.FreeSwitch _freeswitch;
+        public InboundClientEventArgs(Inbound.FreeSwitch freeswitch)
         {
-            try { return (T) Enum.Parse(typeof (T), name, true); }
-            catch (Exception) {
-#if DEBUG
-                throw;
-#else
-                return 0;
-#endif
-            }
+            _freeswitch = freeswitch;
         }
     }
 }

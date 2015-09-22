@@ -24,6 +24,7 @@ using System.Net;
 using System.Net.Sockets;
 using System.Threading;
 using System.Threading.Tasks;
+using NetFreeSwitch.Framework.FreeSwitch.Codecs;
 using NetFreeSwitch.Framework.FreeSwitch.Commands;
 using NetFreeSwitch.Framework.FreeSwitch.Events;
 using NetFreeSwitch.Framework.FreeSwitch.Messages;
@@ -264,7 +265,7 @@ namespace NetFreeSwitch.Framework.FreeSwitch.Outbound {
                 throw new InvalidOperationException("Socket is already connected");
             _socket = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
             _socket.SetSocketOption(SocketOptionLevel.Tcp, SocketOptionName.NoDelay, 1);
-            _socket.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.Linger, new LingerOption(true, 1));
+            _socket.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.Linger, new LingerOption(true, 600));
             _args.RemoteEndPoint = new IPEndPoint(IPAddress.Parse(Address), Port);
             var isPending = _socket.ConnectAsync(_args);
             if (!isPending)
@@ -325,7 +326,7 @@ namespace NetFreeSwitch.Framework.FreeSwitch.Outbound {
             object item;
             var gotItem = _readItems.TryDequeue(out item);
             if (!gotItem)
-                throw new ChannelException("Was signalled that something have been recieved, but found nothing in the in queue");
+                throw new ChannelException("Was signalled that something have been received, but found nothing in the in queue");
             // signal so that more items can be read directly
             if (_readItems.Count > 0)
                 _readSemaphore.Release();

@@ -7,6 +7,7 @@ using NetFreeSwitch.Framework.FreeSwitch.Commands;
 using NetFreeSwitch.Framework.FreeSwitch.Messages;
 using NetFreeSwitch.Framework.FreeSwitch.Outbound;
 using NLog;
+using NetFreeSwitch.Framework.FreeSwitch.Inbound;
 
 namespace Networking.Demo {
     internal class Program {
@@ -15,8 +16,19 @@ namespace Networking.Demo {
         private const int Port = 8021;
         public static Logger Log = LogManager.GetCurrentClassLogger();
         private static OutboundChannelSession client;
+        private static FreeSwitchServer server;
+
+        private const int ServerPort = 10000;
 
         private static void Main(string[] args) {
+
+            // Let us start the outboud server
+            server = new FreeSwitchServer();
+            server.ClientReady += OnClientReady;
+
+            server.Start(System.Net.IPAddress.Any, ServerPort);
+            Thread.Sleep(500);
+
             client = new OutboundChannelSession(Address, Port, Password);
             client.ConnectAsync();
 
@@ -45,17 +57,28 @@ namespace Networking.Demo {
             Log.Info("sofia status :\n");
             Log.Info("\n\n" + response.Body);
 
+            // Let us make a call and handle it
+            string callCommand = "{ignore_early_media=true,originate_timeout=120}user/1000@127.0.0.1 &socket(127.0.0.1 async full)";
+            BgApiCommand bgapicommand = new BgApiCommand("originate", callCommand);
+            Guid jobId = client.SendBgApi(bgapicommand).Result;
+            Log.Info("Job Id {0}", jobId);
 
-            EslLogLevels levels = EslLogLevels.INFO;
-            client.SetLogLevel(levels);
 
-            client.CloseAsync();
+           // EslLogLevels levels = EslLogLevels.INFO;
+           // client.SetLogLevel(levels);
 
-            Thread.Sleep(500);
-            Log.Info("Connection Status {0}", client.Connected);
-            Log.Info("Authentication Status {0}", client.Authenticated);
+           // client.CloseAsync();
+
+            //Thread.Sleep(500);
+            //Log.Info("Connection Status {0}", client.Connected);
+            //Log.Info("Authentication Status {0}", client.Authenticated);
 
             Console.ReadKey();
+        }
+
+        private static void OnClientReady(object sender, InboundClientEventArgs e)
+        {
+            Log.Info("Connected client is ready");
         }
     }
 }
