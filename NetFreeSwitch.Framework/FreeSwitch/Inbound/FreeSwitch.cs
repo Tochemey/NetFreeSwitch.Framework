@@ -53,9 +53,14 @@ namespace NetFreeSwitch.Framework.FreeSwitch.Inbound {
 
         public FreeSwitch(ITcpChannel channel) {
             _channel = channel;
+            _channel.MessageSent = OnMessageSent;
+            _channel.MessageReceived = OnMessageReceived;
             _requestsQueue = new ConcurrentQueue<CommandAsyncEvent>();
-            MessageReceived = OnMessageReceived;
             Error = OnError;
+        }
+
+        private void OnMessageSent(ITcpChannel channel, object message) {
+            _sendCompletedSemaphore.Release();
         }
 
         public event EventHandler<EslEventArgs> OnBackgroundJob = delegate { };
@@ -127,7 +132,7 @@ namespace NetFreeSwitch.Framework.FreeSwitch.Inbound {
         /// <summary>
         ///     Channel received a new message
         /// </summary>
-        public MessageHandler MessageReceived { get; private set; }
+        public MessageHandler MessageReceived { get; set; }
 
         /// <summary>
         ///     Address to the currently connected client.
