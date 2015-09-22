@@ -20,12 +20,11 @@ under the License.
 using System;
 using System.Net.Sockets;
 using System.Text;
-using NetFreeSwitch.Framework.Common;
 using NetFreeSwitch.Framework.FreeSwitch.Commands;
 using NetFreeSwitch.Framework.Net;
 using NetFreeSwitch.Framework.Net.Channels;
 
-namespace NetFreeSwitch.Framework.FreeSwitch
+namespace NetFreeSwitch.Framework.FreeSwitch.Codecs
 {
     public class FreeSwitchEncoder : IMessageEncoder {
         private const string MESSAGE_END_STRING = "\n\n";
@@ -52,11 +51,11 @@ namespace NetFreeSwitch.Framework.FreeSwitch
 
             string command = _message.ToString();
             if (string.IsNullOrEmpty(command)) throw new InvalidOperationException("The encoder cannot encode the message. Nothing to encode.");
-            if (!command.Trim().EndsWith(MESSAGE_END_STRING)) command += MESSAGE_END_STRING;
+            string trimmed = command.Trim();
+            if (!trimmed.EndsWith(MESSAGE_END_STRING)) trimmed += MESSAGE_END_STRING;
 
-            var len = Encoding.UTF8.GetByteCount(command);
-            BitConverter2.GetBytes(len, _buffer, 0);
-            Encoding.UTF8.GetBytes(command, 0, command.Length, _buffer, 0);
+            var len = Encoding.UTF8.GetByteCount(trimmed);
+            Encoding.UTF8.GetBytes(trimmed, 0, trimmed.Length, _buffer, 0);
             _bytesToSend = len;
             _offset = 0;
         }
