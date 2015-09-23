@@ -27,6 +27,7 @@ using NetFreeSwitch.Framework.Net;
 using NetFreeSwitch.Framework.Net.Buffers;
 using NetFreeSwitch.Framework.Net.Channels;
 using NetFreeSwitch.Framework.Net.Protocols;
+using NLog;
 
 namespace NetFreeSwitch.Framework.FreeSwitch.Inbound {
     /// <summary>
@@ -34,6 +35,7 @@ namespace NetFreeSwitch.Framework.FreeSwitch.Inbound {
     ///     Very useful when implementing FreeSwitch mod_event_socket outbound mode.
     /// </summary>
     public class FreeSwitchListener : IMessagingListener {
+        private Logger _log = LogManager.GetCurrentClassLogger();
         private readonly ConcurrentStack<ITcpChannel> _channels = new ConcurrentStack<ITcpChannel>();
         private IBufferSlicePool _bufferPool;
         private ChannelTcpListenerConfiguration _configuration;
@@ -176,7 +178,9 @@ namespace NetFreeSwitch.Framework.FreeSwitch.Inbound {
         /// </summary>
         /// <param name="source">Channel for the client</param>
         /// <param name="msg">Message (as decoded by the specified <see cref="IMessageDecoder" />).</param>
-        protected virtual void OnMessage(ITcpChannel source, object msg) { _messageReceived(source, msg); }
+        protected virtual void OnMessage(ITcpChannel source, object msg) {
+            _messageReceived(source, msg);
+        }
 
         private void OnAcceptSocket(IAsyncResult ar)
         {

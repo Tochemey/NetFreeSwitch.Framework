@@ -58,7 +58,7 @@ namespace Networking.Demo {
             Log.Info("\n\n" + response.Body);
 
             // Let us make a call and handle it
-            string callCommand = "{ignore_early_media=true,originate_timeout=120}user/1000@127.0.0.1 &socket(127.0.0.1 async full)";
+            string callCommand = "{ignore_early_media=true,originate_timeout=120}user/1000@127.0.0.1 &socket(127.0.0.1:10000 async full)";
             BgApiCommand bgapicommand = new BgApiCommand("originate", callCommand);
             Guid jobId = client.SendBgApi(bgapicommand).Result;
             Log.Info("Job Id {0}", jobId);
