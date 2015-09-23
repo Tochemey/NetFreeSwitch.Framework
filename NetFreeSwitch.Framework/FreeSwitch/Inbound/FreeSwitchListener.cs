@@ -46,8 +46,7 @@ namespace NetFreeSwitch.Framework.FreeSwitch.Inbound {
         /// <summary>
         /// </summary>
         /// <param name="configuration"></param>
-        public FreeSwitchListener(ChannelTcpListenerConfiguration configuration)
-        {
+        public FreeSwitchListener(ChannelTcpListenerConfiguration configuration) {
             if (configuration == null) throw new ArgumentNullException("configuration");
 
             Configure(configuration);
@@ -56,8 +55,7 @@ namespace NetFreeSwitch.Framework.FreeSwitch.Inbound {
 
         /// <summary>
         /// </summary>
-        public FreeSwitchListener()
-        {
+        public FreeSwitchListener() {
             Configure(new ChannelTcpListenerConfiguration(() => new FreeSwitchDecoder(), () => new FreeSwitchEncoder()));
             ChannelFactory = new TcpChannelFactory();
         }
@@ -70,6 +68,7 @@ namespace NetFreeSwitch.Framework.FreeSwitch.Inbound {
         ///     An internal error occurred
         /// </summary>
         public event EventHandler<ErrorEventArgs> ListenerError = delegate { };
+
         public ITcpChannelFactory ChannelFactory { get; set; }
 
         /// <summary>
@@ -86,7 +85,7 @@ namespace NetFreeSwitch.Framework.FreeSwitch.Inbound {
                 if (_listener == null)
                     return -1;
 
-                return ((IPEndPoint)_listener.LocalEndpoint).Port;
+                return ((IPEndPoint) _listener.LocalEndpoint).Port;
             }
         }
 
@@ -110,8 +109,7 @@ namespace NetFreeSwitch.Framework.FreeSwitch.Inbound {
         /// <param name="address">Address to accept connections on</param>
         /// <param name="port">Port to use. Set to <c>0</c> to let the OS decide which port to use. </param>
         /// <seealso cref="LocalPort" />
-        public virtual void Start(IPAddress address, int port)
-        {
+        public virtual void Start(IPAddress address, int port) {
             if (port < 0)
                 throw new ArgumentOutOfRangeException("port", port, "Port must be 0 or more.");
             if (_listener != null)
@@ -121,8 +119,7 @@ namespace NetFreeSwitch.Framework.FreeSwitch.Inbound {
             _listener.AllowNatTraversal(true);
             _listener.Start();
 
-            for (var i = 0; i < 20; i++)
-            {
+            for (var i = 0; i < 20; i++) {
                 var decoder = _configuration.DecoderFactory();
                 var encoder = _configuration.EncoderFactory();
                 var channel = ChannelFactory.Create(_bufferPool.Pop(), encoder, decoder);
@@ -135,10 +132,9 @@ namespace NetFreeSwitch.Framework.FreeSwitch.Inbound {
         /// <summary>
         ///     Stop the listener.
         /// </summary>
-        public virtual async void Stop()
-        {
+        public virtual async void Stop() {
             // Let us do some cleaning
-            foreach (ITcpChannel tcpChannel in _channels) { await tcpChannel.CloseAsync(); }
+            foreach (ITcpChannel tcpChannel in _channels) await tcpChannel.CloseAsync();
             _channels.Clear();
             _listener.Stop();
         }
@@ -151,13 +147,13 @@ namespace NetFreeSwitch.Framework.FreeSwitch.Inbound {
             _bufferPool = configuration.BufferPool;
             _configuration = configuration;
         }
+
         /// <summary>
         ///     A client has connected (nothing has been sent or received yet)
         /// </summary>
         /// <param name="channel">Channel which we created for the remote socket.</param>
         /// <returns></returns>
-        protected virtual ClientConnectedEventArgs OnClientConnected(ITcpChannel channel)
-        {
+        protected virtual ClientConnectedEventArgs OnClientConnected(ITcpChannel channel) {
             var args = new ClientConnectedEventArgs(channel);
             ClientConnected(this, args);
             return args;
@@ -178,48 +174,40 @@ namespace NetFreeSwitch.Framework.FreeSwitch.Inbound {
         /// </summary>
         /// <param name="source">Channel for the client</param>
         /// <param name="msg">Message (as decoded by the specified <see cref="IMessageDecoder" />).</param>
-        protected virtual void OnMessage(ITcpChannel source, object msg) {
-            _messageReceived(source, msg);
-        }
+        protected virtual void OnMessage(ITcpChannel source, object msg) { _messageReceived(source, msg); }
 
-        private void OnAcceptSocket(IAsyncResult ar)
-        {
-            try
-            {
+        private void OnAcceptSocket(IAsyncResult ar) {
+            try {
                 var socket = _listener.EndAcceptSocket(ar);
                 socket.SetSocketOption(SocketOptionLevel.Tcp, SocketOptionName.NoDelay, 1);
                 socket.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.Linger, new LingerOption(true, 1));
                 ITcpChannel channel;
-                if (!_channels.TryPop(out channel))
-                {
+                if (!_channels.TryPop(out channel)) {
                     var decoder = _configuration.DecoderFactory();
                     var encoder = _configuration.EncoderFactory();
                     channel = ChannelFactory.Create(_bufferPool.Pop(), encoder, decoder);
                 }
 
-                channel.Disconnected = OnChannelDisconnect;
-                channel.MessageReceived = OnMessage;
+                channel.Disconnected += OnChannelDisconnect;
+                channel.MessageReceived += OnMessage;
                 channel.Assign(socket);
 
                 var args = OnClientConnected(channel);
-                if (!args.MayConnect)
-                {
+                if (!args.MayConnect) {
                     if (args.Response != null)
                         channel.Send(args.Response);
                     channel.Close();
                     return;
                 }
             }
-            catch (Exception exception)
-            {
+            catch (Exception exception) {
                 ListenerError(this, new ErrorEventArgs(exception));
             }
 
             if (_listener != null) _listener.BeginAcceptSocket(OnAcceptSocket, null);
         }
 
-        private void OnChannelDisconnect(ITcpChannel source, Exception exception)
-        {
+        private void OnChannelDisconnect(ITcpChannel source, Exception exception) {
             OnClientDisconnected(source, exception);
             source.Cleanup();
             _channels.Push(source);

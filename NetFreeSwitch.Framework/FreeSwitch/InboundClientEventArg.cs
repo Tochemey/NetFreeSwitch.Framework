@@ -28,5 +28,7 @@ namespace NetFreeSwitch.Framework.FreeSwitch
         {
             _freeswitch = freeswitch;
         }
+
+        public Inbound.FreeSwitch Freeswitch { get { return _freeswitch; } }
     }
 }

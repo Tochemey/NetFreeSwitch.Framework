@@ -405,11 +405,11 @@ namespace NetFreeSwitch.Framework.Net.Channels {
 
         private void ReadAsync() {
             try {
+                if(_socket == null || _socket.Connected == false) { }
                 var isPending = _socket.ReceiveAsync(_readArgs);
                 if (!isPending) OnReadCompleted(_socket, _readArgs);
             }
             catch (Exception e) {
-                Console.WriteLine(e);
                 HandleDisconnect(SocketError.ConnectionReset, e);
             }
         }
@@ -419,7 +419,6 @@ namespace NetFreeSwitch.Framework.Net.Channels {
             if (_currentOutboundMessage == CloseMessage) {
                 try { _socket.Shutdown(SocketShutdown.Both); }
                 catch (Exception e) {
-                    Console.WriteLine(e);
                     HandleDisconnect(SocketError.ConnectionReset, e);
                 }
                 _currentOutboundMessage = null;
@@ -435,7 +434,6 @@ namespace NetFreeSwitch.Framework.Net.Channels {
                     OnSendCompleted(this, _writeArgs);
             }
             catch (Exception e) {
-                Console.WriteLine(e);
                 HandleDisconnect(SocketError.ConnectionReset, e);
             }
         }

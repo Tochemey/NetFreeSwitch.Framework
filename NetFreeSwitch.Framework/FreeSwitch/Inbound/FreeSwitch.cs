@@ -22,6 +22,7 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
 using System.Net;
+using System.Net.Sockets;
 using System.Threading;
 using System.Threading.Tasks;
 using NetFreeSwitch.Framework.FreeSwitch.Commands;
@@ -29,13 +30,14 @@ using NetFreeSwitch.Framework.FreeSwitch.Events;
 using NetFreeSwitch.Framework.FreeSwitch.Messages;
 using NetFreeSwitch.Framework.Net;
 using NetFreeSwitch.Framework.Net.Channels;
+using NLog;
 
 namespace NetFreeSwitch.Framework.FreeSwitch.Inbound {
     /// <summary>
     ///     ErrorHandler
     /// </summary>
-    /// <param name="channel"></param>
-    /// <param name="exception"></param>
+    /// <param name="channel">Tcp channel</param>
+    /// <param name="exception">Exception</param>
     public delegate void ErrorHandler(ITcpChannel channel, Exception exception);
 
     /// <summary>
@@ -43,6 +45,7 @@ namespace NetFreeSwitch.Framework.FreeSwitch.Inbound {
     /// </summary>
     public class FreeSwitch : ICallHandler {
         private readonly ITcpChannel _channel;
+        private readonly Logger _log = LogManager.GetCurrentClassLogger();
         private readonly ConcurrentQueue<object> _readItems = new ConcurrentQueue<object>();
         private readonly SemaphoreSlim _readSemaphore = new SemaphoreSlim(0, 1);
         private readonly ConcurrentQueue<CommandAsyncEvent> _requestsQueue;
@@ -51,16 +54,13 @@ namespace NetFreeSwitch.Framework.FreeSwitch.Inbound {
         private ConnectedCall _connectedCall;
         private Exception _sendException;
 
-        public FreeSwitch(ITcpChannel channel) {
+        public FreeSwitch(ref ITcpChannel channel) {
             _channel = channel;
-            _channel.MessageSent = OnMessageSent;
-            _channel.MessageReceived = OnMessageReceived;
+            _channel.MessageSent += OnMessageSent;
+            _channel.ChannelFailure += OnError;
             _requestsQueue = new ConcurrentQueue<CommandAsyncEvent>();
-            Error = OnError;
-        }
-
-        private void OnMessageSent(ITcpChannel channel, object message) {
-            _sendCompletedSemaphore.Release();
+            Error += OnError;
+            MessageReceived += OnMessageReceived;
         }
 
         public event EventHandler<EslEventArgs> OnBackgroundJob = delegate { };
@@ -103,11 +103,11 @@ namespace NetFreeSwitch.Framework.FreeSwitch.Inbound {
 
         public event EventHandler<EslEventArgs> OnRecordStop = delegate { };
 
+        public event EventHandler<EslRudeRejectionEventArgs> OnRudeRejection = delegate { };
+
         public event EventHandler<EslEventArgs> OnSessionHeartbeat = delegate { };
 
         public event EventHandler<EslUnhandledMessageEventArgs> OnUnhandledMessage = delegate { };
-
-        public event EventHandler<EslRudeRejectionEventArgs> OnRudeRejection = delegate { };
 
         /// <summary>
         ///     Can be compared with a session in a web server.
@@ -132,7 +132,7 @@ namespace NetFreeSwitch.Framework.FreeSwitch.Inbound {
         /// <summary>
         ///     Channel received a new message
         /// </summary>
-        public MessageHandler MessageReceived { get; set; }
+        public MessageHandler MessageReceived { get; private set; }
 
         /// <summary>
         ///     Address to the currently connected client.
@@ -184,6 +184,12 @@ namespace NetFreeSwitch.Framework.FreeSwitch.Inbound {
             return reply != null && reply.IsSuccessful;
         }
 
+        /// <summary>
+        /// Hangup().
+        /// </summary>
+        /// <param name="id">The channel Id</param>
+        /// <param name="reason">The hangup reason</param>
+        /// <returns></returns>
         public async Task<CommandReply> Hangup(Guid id, string reason) { return await ExecuteApplication("hangup", reason, true); }
 
         /// <summary>
@@ -555,7 +561,19 @@ namespace NetFreeSwitch.Framework.FreeSwitch.Inbound {
             return await Send(command);
         }
 
-        private void OnError(ITcpChannel channel, Exception exception) { throw new NotImplementedException(); }
+        private void OnError(ITcpChannel channel, Exception exception) {
+            if (exception != null) {
+                SocketException socketException = exception as SocketException;
+                if (socketException != null) {
+                    var soke = socketException;
+                    if (soke.SocketErrorCode == SocketError.Shutdown) {
+                        _log.Warn("Channel [#{0}--Address={1}] Socket already closed", channel.ChannelId, channel.RemoteEndpoint);
+                        return;
+                    }
+                }
+            }
+            _log.Error(exception);
+        }
 
         private async void OnMessageReceived(ITcpChannel channel, object message) {
             // Here we validate the channel.
@@ -592,10 +610,10 @@ namespace NetFreeSwitch.Framework.FreeSwitch.Inbound {
                     var logdata = new LogData(headers, decodedMessage.BodyText);
                     break;
                 case "text/disconnect-notice":
-                    _connectedCall = null;
-                    await _channel.CloseAsync();
                     var notice = new DisconnectNotice(decodedMessage.BodyText);
                     if (OnDisconnectNotice != null) OnDisconnectNotice(this, new EslDisconnectNoticeEventArgs(notice));
+                    _connectedCall = null;
+                    await _channel.CloseAsync();
                     break;
                 case "text/rude-rejection":
                     _connectedCall = null;
@@ -610,5 +628,7 @@ namespace NetFreeSwitch.Framework.FreeSwitch.Inbound {
                     break;
             }
         }
+
+        private void OnMessageSent(ITcpChannel channel, object message) { _sendCompletedSemaphore.Release(); }
     }
 }
