@@ -30,7 +30,10 @@ namespace Networking.Demo {
             server.Start(IPAddress.Parse("192.168.254.52"), ServerPort);
             Thread.Sleep(500);
 
-            client = new OutboundChannelSession(Address, Port, Password);
+            string evenlist = "BACKGROUND_JOB  CHANNEL_PROGRESS  CHANNEL_PROGRESS_MEDIA  CHANNEL_HANGUP_COMPLETE  CHANNEL_STATE SESSION_HEARTBEAT  CALL_UPDATE RECORD_STOP  CHANNEL_BRIDGE  CHANNEL_UNBRIDGE  CHANNEL_ANSWER  CHANNEL_ORIGINATE CHANNEL_EXECUTE  CHANNEL_EXECUTE_COMPLETE";
+            client = new OutboundChannelSession(Address, Port, Password, evenlist);
+            client.OnChannelProgressMedia += OnChannelProgressMedia;
+            client.OnChannelState += OnChannelState;
             client.ConnectAsync();
 
             Thread.Sleep(500);
@@ -64,17 +67,26 @@ namespace Networking.Demo {
             Guid jobId = client.SendBgApi(bgapicommand).Result;
             Log.Info("Job Id {0}", jobId);
 
+            Thread.Sleep(500);
 
-           // EslLogLevels levels = EslLogLevels.INFO;
-           // client.SetLogLevel(levels);
+            // EslLogLevels levels = EslLogLevels.INFO;
+            // client.SetLogLevel(levels);
 
-           // client.CloseAsync();
+            // client.CloseAsync();
 
             //Thread.Sleep(500);
             //Log.Info("Connection Status {0}", client.Connected);
             //Log.Info("Authentication Status {0}", client.Authenticated);
 
             Console.ReadKey();
+        }
+
+        private static void OnChannelState(object sender, EslEventArgs e) {
+            Log.Info("Client Received Channel State event {0}", e.EventReceived.ToString());
+        }
+
+        private static void OnChannelProgressMedia(object sender, EslEventArgs e) {
+            Log.Info("Client Received Channel Progress Media event {0}", e.EventReceived.ToString());
         }
 
         private static void OnClientReady(object sender, InboundClientEventArgs e) {

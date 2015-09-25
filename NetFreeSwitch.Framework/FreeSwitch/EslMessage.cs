@@ -20,6 +20,7 @@ under the License.
 using System;
 using System.Collections.Generic;
 using System.Collections.Specialized;
+using System.Text;
 
 namespace NetFreeSwitch.Framework.FreeSwitch {
     /// <summary>
@@ -109,6 +110,13 @@ namespace NetFreeSwitch.Framework.FreeSwitch {
                 ret.Add(name.Trim(), value.Trim());
             }
             return ret;
+        }
+
+        public override string ToString() {
+            var sb = new StringBuilder();
+            foreach (string str in Items.Keys)
+                sb.AppendLine(str + ":" + Items[str]);
+            return sb.ToString();
         }
     }
 }

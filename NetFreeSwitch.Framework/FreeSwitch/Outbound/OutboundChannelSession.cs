@@ -40,8 +40,6 @@ namespace NetFreeSwitch.Framework.FreeSwitch.Outbound {
         private static bool _authenticated;
         private readonly SocketAsyncEventArgs _args = new SocketAsyncEventArgs();
         private readonly SemaphoreSlim _connectSemaphore = new SemaphoreSlim(0, 1);
-        private readonly ConcurrentQueue<object> _readItems = new ConcurrentQueue<object>();
-        private readonly SemaphoreSlim _readSemaphore = new SemaphoreSlim(0, 1);
         private readonly ConcurrentQueue<CommandAsyncEvent> _requestsQueue;
         private readonly SemaphoreSlim _sendCompletedSemaphore = new SemaphoreSlim(0, 1);
         private readonly SemaphoreSlim _sendQueueSemaphore = new SemaphoreSlim(1, 1);
@@ -49,6 +47,7 @@ namespace NetFreeSwitch.Framework.FreeSwitch.Outbound {
         private Exception _connectException;
         private Exception _sendException;
         private Socket _socket;
+
 
         /// <summary>
         ///     This constructor sets user defined values to connect to FreeSwitch.
@@ -70,12 +69,12 @@ namespace NetFreeSwitch.Framework.FreeSwitch.Outbound {
             Password = password;
             _authenticated = false;
             _requestsQueue = new ConcurrentQueue<CommandAsyncEvent>();
-            _channel = new TcpChannel(new BufferSlice(new byte[65535], 0, 65535), MessageEncoder, MessageDecoder) {
-                MessageReceived = OnMessageReceived
-            };
+            _channel = new TcpChannel(new BufferSlice(new byte[65535], 0, 65535), MessageEncoder, MessageDecoder);
+            _channel.MessageReceived += OnMessageReceived;
             _channel.Disconnected += OnDisconnect;
-            _channel.MessageSent = OnSendCompleted;
+            _channel.MessageSent += OnSendCompleted;
             _args.Completed += OnConnect;
+            OnAuthentication += SendAuthentication;
         }
 
         /// <summary>
@@ -95,12 +94,12 @@ namespace NetFreeSwitch.Framework.FreeSwitch.Outbound {
             FreeSwitchEventFilter = "plain ALL";
             _authenticated = false;
             _requestsQueue = new ConcurrentQueue<CommandAsyncEvent>();
-            _channel = new TcpChannel(new BufferSlice(new byte[65535], 0, 65535), MessageEncoder, MessageDecoder) {
-                MessageReceived = OnMessageReceived
-            };
+            _channel = new TcpChannel(new BufferSlice(new byte[65535], 0, 65535), MessageEncoder, MessageDecoder);
+            _channel.MessageReceived += OnMessageReceived;
             _channel.Disconnected += OnDisconnect;
-            _channel.MessageSent = OnSendCompleted;
+            _channel.MessageSent += OnSendCompleted;
             _args.Completed += OnConnect;
+            OnAuthentication += SendAuthentication;
         }
 
         /// <summary>
@@ -120,12 +119,38 @@ namespace NetFreeSwitch.Framework.FreeSwitch.Outbound {
             FreeSwitchEventFilter = "plain ALL";
             _authenticated = false;
             _requestsQueue = new ConcurrentQueue<CommandAsyncEvent>();
-            _channel = new TcpChannel(new BufferSlice(new byte[65535], 0, 65535), MessageEncoder, MessageDecoder) {
-                MessageReceived = OnMessageReceived
-            };
+            _channel = new TcpChannel(new BufferSlice(new byte[65535], 0, 65535), MessageEncoder, MessageDecoder);
+            _channel.MessageReceived += OnMessageReceived;
             _channel.Disconnected += OnDisconnect;
-            _channel.MessageSent = OnSendCompleted;
+            _channel.MessageSent += OnSendCompleted;
             _args.Completed += OnConnect;
+            OnAuthentication += SendAuthentication;
+        }
+
+        /// <summary>
+        ///     This constructor sets user defined values to connect to FreeSwitch using in-built message encoder/decoders.
+        ///     The connection timeout is set to zero
+        /// </summary>
+        /// <param name="address">FreeSwitch mod_event_socket IP address or hostname</param>
+        /// <param name="port">FreeSwitch mod_event_socket Port number</param>
+        /// <param name="password">FreeSwitch mod_event_socket Password</param>
+        /// <param name="eventfilters">FreeSwitch event list</param>
+        public OutboundChannelSession(string address, int port, string password, string eventfilters) {
+            Address = address;
+            Port = port;
+            ConnectionTimeout = TimeSpan.Zero;
+            Password = password;
+            MessageEncoder = new FreeSwitchEncoder();
+            MessageDecoder = new FreeSwitchDecoder();
+            FreeSwitchEventFilter = "plain " + eventfilters;
+            _authenticated = false;
+            _requestsQueue = new ConcurrentQueue<CommandAsyncEvent>();
+            _channel = new TcpChannel(new BufferSlice(new byte[65535], 0, 65535), MessageEncoder, MessageDecoder);
+            _channel.MessageReceived += OnMessageReceived;
+            _channel.Disconnected += OnDisconnect;
+            _channel.MessageSent += OnSendCompleted;
+            _args.Completed += OnConnect;
+            OnAuthentication += SendAuthentication;
         }
 
         /// <summary>
@@ -141,14 +166,16 @@ namespace NetFreeSwitch.Framework.FreeSwitch.Outbound {
             FreeSwitchEventFilter = "plain ALL";
             _authenticated = false;
             _requestsQueue = new ConcurrentQueue<CommandAsyncEvent>();
-            _channel = new TcpChannel(new BufferSlice(new byte[65535], 0, 65535), MessageEncoder, MessageDecoder) {
-                MessageReceived = OnMessageReceived
-            };
+            _channel = new TcpChannel(new BufferSlice(new byte[65535], 0, 65535), MessageEncoder, MessageDecoder);
+            _channel.MessageReceived += OnMessageReceived;
             _channel.Disconnected += OnDisconnect;
-            _channel.MessageSent = OnSendCompleted;
+            _channel.MessageSent += OnSendCompleted;
             _args.Completed += OnConnect;
+            OnAuthentication += SendAuthentication;
         }
 
+        private async void SendAuthentication(object sender, EventArgs e) { await Authenticate(); }
+        protected event EventHandler<EventArgs> OnAuthentication = delegate { };
         public event EventHandler<EslEventArgs> OnBackgroundJob = delegate { };
 
         public event EventHandler<EslEventArgs> OnCallUpdate = delegate { };
@@ -181,19 +208,19 @@ namespace NetFreeSwitch.Framework.FreeSwitch.Outbound {
 
         public event EventHandler<EslEventArgs> OnCustom = delegate { };
 
+        public event EventHandler<EslDisconnectNoticeEventArgs> OnDisconnectNotice = delegate { };
+
         public event EventHandler<EslEventArgs> OnDtmf = delegate { };
 
         public event EventHandler<EslEventArgs> OnReceivedUnHandledEvent = delegate { };
 
         public event EventHandler<EslEventArgs> OnRecordStop = delegate { };
 
+        public event EventHandler<EslRudeRejectionEventArgs> OnRudeRejection = delegate { };
+
         public event EventHandler<EslEventArgs> OnSessionHeartbeat = delegate { };
 
         public event EventHandler<EslUnhandledMessageEventArgs> OnUnhandledMessage = delegate { };
-
-        public event EventHandler<EslRudeRejectionEventArgs> OnRudeRejection = delegate { };
-
-        public event EventHandler<EslDisconnectNoticeEventArgs> OnDisconnectNotice = delegate { };
 
         /// <summary>
         ///     Event Socket Address
@@ -296,17 +323,9 @@ namespace NetFreeSwitch.Framework.FreeSwitch.Outbound {
                 || !Authenticated)
                 return null;
             // Send command
-            EnqueueCommand(command);
+            CommandAsyncEvent event2 = EnqueueCommand(command);
             await SendAsync(command);
-            await _readSemaphore.WaitAsync(TimeSpan.FromMilliseconds(-1), CancellationToken.None);
-            object item;
-            var gotItem = _readItems.TryDequeue(out item);
-            if (!gotItem)
-                throw new ChannelException("Was signalled that something have been recieved, but found nothing in the in queue");
-            // signal so that more items can be read directly
-            if (_readItems.Count > 0)
-                _readSemaphore.Release();
-            return await ValidateResponse(command, item as EslMessage) as CommandReply;
+            return await event2.Task as CommandReply;
         }
 
         /// <summary>
@@ -320,17 +339,9 @@ namespace NetFreeSwitch.Framework.FreeSwitch.Outbound {
                 || !Authenticated)
                 return null;
             // Send the command
-            EnqueueCommand(command);
+            CommandAsyncEvent event2 = EnqueueCommand(command);
             await SendAsync(command);
-            await _readSemaphore.WaitAsync(TimeSpan.FromMilliseconds(-1), CancellationToken.None);
-            object item;
-            var gotItem = _readItems.TryDequeue(out item);
-            if (!gotItem)
-                throw new ChannelException("Was signalled that something have been received, but found nothing in the in queue");
-            // signal so that more items can be read directly
-            if (_readItems.Count > 0)
-                _readSemaphore.Release();
-            return await ValidateResponse(command, item as EslMessage) as ApiResponse;
+            return await event2.Task as ApiResponse;
         }
 
         /// <summary>
@@ -395,19 +406,17 @@ namespace NetFreeSwitch.Framework.FreeSwitch.Outbound {
         protected async Task Authenticate() {
             var command = new AuthCommand(Password);
             // Send the command
-            EnqueueCommand(command);
+            CommandAsyncEvent event2 = EnqueueCommand(command);
             await SendAsync(command);
-            await _readSemaphore.WaitAsync(TimeSpan.FromMilliseconds(-1), CancellationToken.None);
-            object item;
-            var gotItem = _readItems.TryDequeue(out item);
-            if (!gotItem)
-                throw new ChannelException("Was signalled that something have been recieved, but found nothing in the in queue");
-            // signal so that more items can be read directly
-            if (_readItems.Count > 0)
-                _readSemaphore.Release();
-            var response = await ValidateResponse(command, item as EslMessage) as CommandReply;
-            if (response == null) await CloseAsync();
-            if (!response.IsSuccessful) await CloseAsync();
+            var response = await event2.Task as CommandReply;
+            if (response == null) {
+                await CloseAsync();
+                return;
+            }
+            if (!response.IsSuccessful) {
+                await CloseAsync();
+                return;
+            }
             _authenticated = true;
             if (!string.IsNullOrEmpty(FreeSwitchEventFilter)) await SubscribeToEvents();
         }
@@ -631,9 +640,6 @@ namespace NetFreeSwitch.Framework.FreeSwitch.Outbound {
                 _sendException = arg2;
                 _sendCompletedSemaphore.Release();
             }
-            if (_readSemaphore.CurrentCount != 0) return;
-            _readItems.Enqueue(new ChannelException("Socket got disconnected", arg2));
-            _readSemaphore.Release();
         }
 
         /// <summary>
@@ -646,55 +652,103 @@ namespace NetFreeSwitch.Framework.FreeSwitch.Outbound {
             // Handle decoded message.
             if (decodedMessage == null) return;
             if (decodedMessage.Headers == null
-                || !decodedMessage.Headers.HasKeys()) return;
+                || !decodedMessage.Headers.HasKeys())
+                return;
             var headers = decodedMessage.Headers;
+            object response = null;
             var contentType = headers["Content-Type"];
             if (string.IsNullOrEmpty(contentType)) return;
             contentType = contentType.ToLowerInvariant();
             switch (contentType) {
                 case "auth/request":
-                    await Authenticate();
+                    if (OnAuthentication != null) OnAuthentication(this, EventArgs.Empty);
                     break;
                 case "command/reply":
                     var reply = new CommandReply(headers, decodedMessage.OriginalMessage);
-                    _readItems.Enqueue(reply);
-                    if (_readSemaphore.CurrentCount == 0)
-                        _readSemaphore.Release();
+                    response = reply;
                     break;
                 case "api/response":
                     var apiResponse = new ApiResponse(decodedMessage.BodyText);
-                    _readItems.Enqueue(apiResponse);
-                    if (_readSemaphore.CurrentCount == 0)
-                        _readSemaphore.Release();
+                    response = apiResponse;
                     break;
                 case "text/event-plain":
                     var parameters = decodedMessage.BodyLines.AllKeys.ToDictionary(key => key, key => decodedMessage.BodyLines[key]);
                     var @event = new EslEvent(parameters);
-                    PopEvent(@event);
+                    response = @event;
                     break;
                 case "log/data":
                     var logdata = new LogData(headers, decodedMessage.BodyText);
+                    response = logdata;
                     break;
                 case "text/rude-rejection":
                     await _channel.CloseAsync();
-                    _authenticated = false;
-                    _channel = null;
                     var reject = new RudeRejection(decodedMessage.BodyText);
-                    if (OnRudeRejection != null) OnRudeRejection(this, new EslRudeRejectionEventArgs(reject));
+                    response = reject;
                     break;
                 case "text/disconnect-notice":
-                    await _channel.CloseAsync();
-                    _authenticated = false;
-                    _channel = null;
                     var notice = new DisconnectNotice(decodedMessage.BodyText);
-                    if (OnDisconnectNotice != null) OnDisconnectNotice(this, new EslDisconnectNoticeEventArgs(notice));
+                    response = notice;
                     break;
                 default:
                     // Here we are handling an unknown message
                     var msg = new EslMessage(decodedMessage.Headers, decodedMessage.OriginalMessage);
-                    if (OnUnhandledMessage != null) OnUnhandledMessage(this, new EslUnhandledMessageEventArgs(msg));
+                    response = msg;
                     break;
             }
+
+            await HandleResponse(response);
+        }
+
+
+        protected async Task HandleResponse(object item) {
+            if (item == null) return;
+            var @event = item as EslEvent;
+            if (@event != null) {
+                PopEvent(@event);
+                return;
+            }
+
+            CommandReply reply = item as CommandReply;
+            if (reply != null) {
+                if (_requestsQueue.Count <= 0) return;
+                CommandAsyncEvent event2;
+                if (!_requestsQueue.TryDequeue(out event2)) return;
+                if (event2 == null) return;
+                event2.Complete(reply);
+                return;
+            }
+
+            ApiResponse response = item as ApiResponse;
+            if (response != null) {
+                if (_requestsQueue.Count <= 0) return;
+                CommandAsyncEvent event2;
+                if (!_requestsQueue.TryDequeue(out event2)) return;
+                if (event2 == null) return;
+                event2.Complete(response);
+                return;
+            }
+
+            DisconnectNotice notice = item as DisconnectNotice;
+            if (notice != null) {
+                if (OnDisconnectNotice != null) OnDisconnectNotice(this, new EslDisconnectNoticeEventArgs(notice));
+                await _channel.CloseAsync();
+                return;
+            }
+
+            RudeRejection rejection = item as RudeRejection;
+            if (rejection != null) {
+                if (OnRudeRejection != null) OnRudeRejection(this, new EslRudeRejectionEventArgs(rejection));
+                return;
+            }
+
+            LogData logdata = item as LogData;
+            if (logdata != null) {
+                //todo handle log/data
+                return;
+            }
+
+            EslMessage msg = item as EslMessage;
+            if (OnUnhandledMessage != null) OnUnhandledMessage(this, new EslUnhandledMessageEventArgs(msg));
         }
 
         /// <summary>
