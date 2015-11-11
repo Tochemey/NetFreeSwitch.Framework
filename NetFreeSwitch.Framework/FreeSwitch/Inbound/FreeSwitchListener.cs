@@ -36,7 +36,7 @@ namespace NetFreeSwitch.Framework.FreeSwitch.Inbound {
     /// </summary>
     public class FreeSwitchListener : IMessagingListener {
         private Logger _log = LogManager.GetCurrentClassLogger();
-        private readonly ConcurrentStack<ITcpChannel> _channels = new ConcurrentStack<ITcpChannel>();
+        private readonly ConcurrentDictionary<string, ITcpChannel> _channels;
         private IBufferSlicePool _bufferPool;
         private ChannelTcpListenerConfiguration _configuration;
         private TcpListener _listener;
@@ -51,6 +51,7 @@ namespace NetFreeSwitch.Framework.FreeSwitch.Inbound {
 
             Configure(configuration);
             ChannelFactory = new TcpChannelFactory();
+            _channels = new ConcurrentDictionary<string, ITcpChannel>();
         }
 
         /// <summary>
@@ -58,6 +59,7 @@ namespace NetFreeSwitch.Framework.FreeSwitch.Inbound {
         public FreeSwitchListener() {
             Configure(new ChannelTcpListenerConfiguration(() => new FreeSwitchDecoder(), () => new FreeSwitchEncoder()));
             ChannelFactory = new TcpChannelFactory();
+            _channels = new ConcurrentDictionary<string, ITcpChannel>();
         }
 
         public event EventHandler<ClientConnectedEventArgs> ClientConnected;
@@ -118,14 +120,6 @@ namespace NetFreeSwitch.Framework.FreeSwitch.Inbound {
             _listener = new TcpListener(address, port);
             _listener.AllowNatTraversal(true);
             _listener.Start();
-
-            for (var i = 0; i < 20; i++) {
-                var decoder = _configuration.DecoderFactory();
-                var encoder = _configuration.EncoderFactory();
-                var channel = ChannelFactory.Create(_bufferPool.Pop(), encoder, decoder);
-                _channels.Push(channel);
-            }
-
             _listener.BeginAcceptSocket(OnAcceptSocket, null);
         }
 
@@ -134,8 +128,16 @@ namespace NetFreeSwitch.Framework.FreeSwitch.Inbound {
         /// </summary>
         public virtual async void Stop() {
             // Let us do some cleaning
-            foreach (ITcpChannel tcpChannel in _channels) await tcpChannel.CloseAsync();
-            _channels.Clear();
+            if (_channels != null
+                && _channels.Count > 0)
+            {
+                foreach (ITcpChannel tcpChannel in _channels.Values)
+                {
+                    if (tcpChannel.IsConnected)
+                        await tcpChannel.CloseAsync();
+                }
+                _channels.Clear();
+            }
             _listener.Stop();
         }
 
@@ -181,17 +183,15 @@ namespace NetFreeSwitch.Framework.FreeSwitch.Inbound {
                 var socket = _listener.EndAcceptSocket(ar);
                 socket.SetSocketOption(SocketOptionLevel.Tcp, SocketOptionName.NoDelay, 1);
                 socket.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.Linger, new LingerOption(true, 1));
-                ITcpChannel channel;
-                if (!_channels.TryPop(out channel)) {
-                    var decoder = _configuration.DecoderFactory();
-                    var encoder = _configuration.EncoderFactory();
-                    channel = ChannelFactory.Create(_bufferPool.Pop(), encoder, decoder);
-                }
+                var decoder = _configuration.DecoderFactory();
+                var encoder = _configuration.EncoderFactory();
+                var channel = ChannelFactory.Create(_bufferPool.Pop(), encoder, decoder);
+
 
                 channel.Disconnected += OnChannelDisconnect;
                 channel.MessageReceived += OnMessage;
                 channel.Assign(socket);
-
+                _channels.TryAdd(channel.ChannelId, channel);
                 var args = OnClientConnected(channel);
                 if (!args.MayConnect) {
                     if (args.Response != null)
@@ -210,7 +210,16 @@ namespace NetFreeSwitch.Framework.FreeSwitch.Inbound {
         private void OnChannelDisconnect(ITcpChannel source, Exception exception) {
             OnClientDisconnected(source, exception);
             source.Cleanup();
-            _channels.Push(source);
+            try
+            {
+                if (_channels != null
+                    && _channels.ContainsKey(source.ChannelId))
+                {
+                    ITcpChannel channel;
+                    _channels.TryRemove(source.ChannelId, out channel);
+                }
+            }
+            catch (Exception) { }
         }
     }
 }
