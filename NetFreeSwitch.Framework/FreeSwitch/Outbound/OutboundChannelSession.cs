@@ -24,6 +24,7 @@ using System.Net;
 using System.Net.Sockets;
 using System.Threading;
 using System.Threading.Tasks;
+using NetFreeSwitch.Framework.Common;
 using NetFreeSwitch.Framework.FreeSwitch.Codecs;
 using NetFreeSwitch.Framework.FreeSwitch.Commands;
 using NetFreeSwitch.Framework.FreeSwitch.Events;
@@ -59,7 +60,8 @@ namespace NetFreeSwitch.Framework.FreeSwitch.Outbound {
         /// <param name="freeSwitchEventFilter">FreeSwitch event filters</param>
         /// <param name="connectionTimeout">Connection Timeout</param>
         /// <param name="password">FreeSwitch mod_event_socket Password</param>
-        public OutboundChannelSession(string address, int port, IMessageEncoder messageEncoder, IMessageDecoder messageDecoder, string freeSwitchEventFilter, TimeSpan connectionTimeout, string password) {
+        public OutboundChannelSession(string address, int port, IMessageEncoder messageEncoder,
+            IMessageDecoder messageDecoder, string freeSwitchEventFilter, TimeSpan connectionTimeout, string password) {
             Address = address;
             Port = port;
             MessageEncoder = messageEncoder;
@@ -174,54 +176,6 @@ namespace NetFreeSwitch.Framework.FreeSwitch.Outbound {
             OnAuthentication += SendAuthentication;
         }
 
-        private async void SendAuthentication(object sender, EventArgs e) { await Authenticate(); }
-        protected event EventHandler<EventArgs> OnAuthentication = delegate { };
-        public event EventHandler<EslEventArgs> OnBackgroundJob = delegate { };
-
-        public event EventHandler<EslEventArgs> OnCallUpdate = delegate { };
-
-        public event EventHandler<EslEventArgs> OnChannelAnswer = delegate { };
-
-        public event EventHandler<EslEventArgs> OnChannelBridge = delegate { };
-
-        public event EventHandler<EslEventArgs> OnChannelExecute = delegate { };
-
-        public event EventHandler<EslEventArgs> OnChannelExecuteComplete = delegate { };
-
-        public event EventHandler<EslEventArgs> OnChannelHangup = delegate { };
-
-        public event EventHandler<EslEventArgs> OnChannelHangupComplete = delegate { };
-
-        public event EventHandler<EslEventArgs> OnChannelOriginate = delegate { };
-
-        public event EventHandler<EslEventArgs> OnChannelPark = delegate { };
-
-        public event EventHandler<EslEventArgs> OnChannelProgress = delegate { };
-
-        public event EventHandler<EslEventArgs> OnChannelProgressMedia = delegate { };
-
-        public event EventHandler<EslEventArgs> OnChannelState = delegate { };
-
-        public event EventHandler<EslEventArgs> OnChannelUnbridge = delegate { };
-
-        public event EventHandler<EslEventArgs> OnChannelUnPark = delegate { };
-
-        public event EventHandler<EslEventArgs> OnCustom = delegate { };
-
-        public event EventHandler<EslDisconnectNoticeEventArgs> OnDisconnectNotice = delegate { };
-
-        public event EventHandler<EslEventArgs> OnDtmf = delegate { };
-
-        public event EventHandler<EslEventArgs> OnReceivedUnHandledEvent = delegate { };
-
-        public event EventHandler<EslEventArgs> OnRecordStop = delegate { };
-
-        public event EventHandler<EslRudeRejectionEventArgs> OnRudeRejection = delegate { };
-
-        public event EventHandler<EslEventArgs> OnSessionHeartbeat = delegate { };
-
-        public event EventHandler<EslUnhandledMessageEventArgs> OnUnhandledMessage = delegate { };
-
         /// <summary>
         ///     Event Socket Address
         /// </summary>
@@ -230,12 +184,17 @@ namespace NetFreeSwitch.Framework.FreeSwitch.Outbound {
         /// <summary>
         ///     Authentication State
         /// </summary>
-        public bool Authenticated { get { return _authenticated; } set { _authenticated = value; } }
+        public bool Authenticated {
+            get { return _authenticated; }
+            set { _authenticated = value; }
+        }
 
         /// <summary>
         ///     Connection State
         /// </summary>
-        public bool Connected { get { return _channel != null && _channel.IsConnected; } }
+        public bool Connected {
+            get { return _channel != null && _channel.IsConnected; }
+        }
 
         /// <summary>
         ///     Connection Timeout
@@ -268,6 +227,67 @@ namespace NetFreeSwitch.Framework.FreeSwitch.Outbound {
         public int Port { get; private set; }
 
         /// <summary>
+        ///     Dispose()
+        /// </summary>
+        public void Dispose() {
+            if (_channel == null)
+                return;
+            _channel.Close();
+            _channel = null;
+        }
+
+        private async Task SendAuthentication(object sender, EventArgs e) {
+            await Authenticate();
+        }
+
+        protected event AsyncEventHandler<EventArgs> OnAuthentication;
+        public event AsyncEventHandler<EslEventArgs> OnBackgroundJob;
+
+        public event AsyncEventHandler<EslEventArgs> OnCallUpdate;
+
+        public event AsyncEventHandler<EslEventArgs> OnChannelAnswer;
+
+        public event AsyncEventHandler<EslEventArgs> OnChannelBridge;
+
+        public event AsyncEventHandler<EslEventArgs> OnChannelExecute;
+
+        public event AsyncEventHandler<EslEventArgs> OnChannelExecuteComplete;
+
+        public event AsyncEventHandler<EslEventArgs> OnChannelHangup;
+
+        public event AsyncEventHandler<EslEventArgs> OnChannelHangupComplete;
+
+        public event AsyncEventHandler<EslEventArgs> OnChannelOriginate;
+
+        public event AsyncEventHandler<EslEventArgs> OnChannelPark;
+
+        public event AsyncEventHandler<EslEventArgs> OnChannelProgress;
+
+        public event AsyncEventHandler<EslEventArgs> OnChannelProgressMedia;
+
+        public event AsyncEventHandler<EslEventArgs> OnChannelState;
+
+        public event AsyncEventHandler<EslEventArgs> OnChannelUnbridge;
+
+        public event AsyncEventHandler<EslEventArgs> OnChannelUnPark;
+
+        public event AsyncEventHandler<EslEventArgs> OnCustom;
+
+        public event AsyncEventHandler<EslDisconnectNoticeEventArgs> OnDisconnectNotice;
+
+        public event AsyncEventHandler<EslEventArgs> OnDtmf;
+
+        public event AsyncEventHandler<EslEventArgs> OnReceivedUnHandledEvent;
+
+        public event AsyncEventHandler<EslEventArgs> OnRecordStop;
+
+        public event AsyncEventHandler<EslRudeRejectionEventArgs> OnRudeRejection;
+
+        public event AsyncEventHandler<EslEventArgs> OnSessionHeartbeat;
+
+        public event AsyncEventHandler<EslUnhandledMessageEventArgs> OnUnhandledMessage;
+
+        /// <summary>
         ///     Disconnect from FreeSwitch mod_event_socket
         /// </summary>
         /// <returns></returns>
@@ -293,23 +313,17 @@ namespace NetFreeSwitch.Framework.FreeSwitch.Outbound {
             _socket = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
             _socket.SetSocketOption(SocketOptionLevel.Tcp, SocketOptionName.NoDelay, 1);
             _socket.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.Linger, new LingerOption(true, 600));
-            _args.RemoteEndPoint = new IPEndPoint(IPAddress.Parse(Address), Port);
+
+            // configured address
+            var address = Address.IsValidIPv4() ? IPAddress.Parse(Address) : Address.ToIPAddress();
+
+            _args.RemoteEndPoint = new IPEndPoint(address, Port);
             var isPending = _socket.ConnectAsync(_args);
             if (!isPending)
                 return;
             await _connectSemaphore.WaitAsync(ConnectionTimeout);
             if (_connectException != null)
                 throw _connectException;
-        }
-
-        /// <summary>
-        ///     Dispose()
-        /// </summary>
-        public void Dispose() {
-            if (_channel == null)
-                return;
-            _channel.Close();
-            _channel = null;
         }
 
         /// <summary>
@@ -323,7 +337,7 @@ namespace NetFreeSwitch.Framework.FreeSwitch.Outbound {
                 || !Authenticated)
                 return null;
             // Send command
-            CommandAsyncEvent event2 = EnqueueCommand(command);
+            var event2 = EnqueueCommand(command);
             await SendAsync(command);
             return await event2.Task as CommandReply;
         }
@@ -339,7 +353,7 @@ namespace NetFreeSwitch.Framework.FreeSwitch.Outbound {
                 || !Authenticated)
                 return null;
             // Send the command
-            CommandAsyncEvent event2 = EnqueueCommand(command);
+            var event2 = EnqueueCommand(command);
             await SendAsync(command);
             return await event2.Task as ApiResponse;
         }
@@ -369,7 +383,7 @@ namespace NetFreeSwitch.Framework.FreeSwitch.Outbound {
         /// <param name="level">The log level to specify</param>
         /// <returns></returns>
         public async Task SetLogLevel(EslLogLevels level) {
-            LogCommand command = new LogCommand(level);
+            var command = new LogCommand(level);
             await SendAsync(command);
         }
 
@@ -380,7 +394,7 @@ namespace NetFreeSwitch.Framework.FreeSwitch.Outbound {
         /// <returns>Async task</returns>
         public async Task ShutdownGracefully() {
             // Let us send exit command to FreeSwitch
-            ExitCommand exit = new ExitCommand();
+            var exit = new ExitCommand();
             await SendAsync(exit);
         }
 
@@ -406,7 +420,7 @@ namespace NetFreeSwitch.Framework.FreeSwitch.Outbound {
         protected async Task Authenticate() {
             var command = new AuthCommand(Password);
             // Send the command
-            CommandAsyncEvent event2 = EnqueueCommand(command);
+            var event2 = EnqueueCommand(command);
             await SendAsync(command);
             var response = await event2.Task as CommandReply;
             if (response == null) {
@@ -425,7 +439,7 @@ namespace NetFreeSwitch.Framework.FreeSwitch.Outbound {
         ///     Used to dispatch .NET events
         /// </summary>
         protected void DispatchEvents(EslEventType eventType, EslEventArgs ea) {
-            EventHandler<EslEventArgs> handler = null;
+            AsyncEventHandler<EslEventArgs> handler = null;
             switch (eventType) {
                 case EslEventType.BACKGROUND_JOB:
                     handler = OnBackgroundJob;
@@ -489,7 +503,9 @@ namespace NetFreeSwitch.Framework.FreeSwitch.Outbound {
                     break;
             }
             if (handler == null) return;
-            try { handler(this, ea); }
+            try {
+                handler(this, ea);
+            }
             catch (Exception) {
                 // ignored
             }
@@ -516,19 +532,22 @@ namespace NetFreeSwitch.Framework.FreeSwitch.Outbound {
                     DispatchEvents(EslEventType.CHANNEL_HANGUP, new EslEventArgs(new ChannelHangup(@event.Items)));
                     break;
                 case "CHANNEL_HANGUP_COMPLETE":
-                    DispatchEvents(EslEventType.CHANNEL_HANGUP_COMPLETE, new EslEventArgs(new ChannelHangup(@event.Items)));
+                    DispatchEvents(EslEventType.CHANNEL_HANGUP_COMPLETE,
+                        new EslEventArgs(new ChannelHangup(@event.Items)));
                     break;
                 case "CHANNEL_PROGRESS":
                     DispatchEvents(EslEventType.CHANNEL_PROGRESS, new EslEventArgs(new ChannelProgress(@event.Items)));
                     break;
                 case "CHANNEL_PROGRESS_MEDIA":
-                    DispatchEvents(EslEventType.CHANNEL_PROGRESS_MEDIA, new EslEventArgs(new ChannelProgressMedia(@event.Items)));
+                    DispatchEvents(EslEventType.CHANNEL_PROGRESS_MEDIA,
+                        new EslEventArgs(new ChannelProgressMedia(@event.Items)));
                     break;
                 case "CHANNEL_EXECUTE":
                     DispatchEvents(EslEventType.CHANNEL_EXECUTE, new EslEventArgs(new ChannelExecute(@event.Items)));
                     break;
                 case "CHANNEL_EXECUTE_COMPLETE":
-                    DispatchEvents(EslEventType.CHANNEL_EXECUTE_COMPLETE, new EslEventArgs(new ChannelExecuteComplete(@event.Items)));
+                    DispatchEvents(EslEventType.CHANNEL_EXECUTE_COMPLETE,
+                        new EslEventArgs(new ChannelExecuteComplete(@event.Items)));
                     break;
                 case "CHANNEL_BRIDGE":
                     DispatchEvents(EslEventType.CHANNEL_BRIDGE, new EslEventArgs(new ChannelBridge(@event.Items)));
@@ -661,7 +680,7 @@ namespace NetFreeSwitch.Framework.FreeSwitch.Outbound {
             contentType = contentType.ToLowerInvariant();
             switch (contentType) {
                 case "auth/request":
-                    if (OnAuthentication != null) OnAuthentication(this, EventArgs.Empty);
+                    if (OnAuthentication != null) await OnAuthentication(this, EventArgs.Empty).ConfigureAwait(false);
                     break;
                 case "command/reply":
                     var reply = new CommandReply(headers, decodedMessage.OriginalMessage);
@@ -672,7 +691,8 @@ namespace NetFreeSwitch.Framework.FreeSwitch.Outbound {
                     response = apiResponse;
                     break;
                 case "text/event-plain":
-                    var parameters = decodedMessage.BodyLines.AllKeys.ToDictionary(key => key, key => decodedMessage.BodyLines[key]);
+                    var parameters = decodedMessage.BodyLines.AllKeys.ToDictionary(key => key,
+                        key => decodedMessage.BodyLines[key]);
                     var @event = new EslEvent(parameters);
                     response = @event;
                     break;
@@ -696,7 +716,7 @@ namespace NetFreeSwitch.Framework.FreeSwitch.Outbound {
                     break;
             }
 
-            await HandleResponse(response);
+            await HandleResponse(response).ConfigureAwait(false);
         }
 
 
@@ -708,7 +728,7 @@ namespace NetFreeSwitch.Framework.FreeSwitch.Outbound {
                 return;
             }
 
-            CommandReply reply = item as CommandReply;
+            var reply = item as CommandReply;
             if (reply != null) {
                 if (_requestsQueue.Count <= 0) return;
                 CommandAsyncEvent event2;
@@ -718,7 +738,7 @@ namespace NetFreeSwitch.Framework.FreeSwitch.Outbound {
                 return;
             }
 
-            ApiResponse response = item as ApiResponse;
+            var response = item as ApiResponse;
             if (response != null) {
                 if (_requestsQueue.Count <= 0) return;
                 CommandAsyncEvent event2;
@@ -728,27 +748,27 @@ namespace NetFreeSwitch.Framework.FreeSwitch.Outbound {
                 return;
             }
 
-            DisconnectNotice notice = item as DisconnectNotice;
+            var notice = item as DisconnectNotice;
             if (notice != null) {
-                if (OnDisconnectNotice != null) OnDisconnectNotice(this, new EslDisconnectNoticeEventArgs(notice));
+                if (OnDisconnectNotice != null) await OnDisconnectNotice(this, new EslDisconnectNoticeEventArgs(notice)).ConfigureAwait(false);
                 await _channel.CloseAsync();
                 return;
             }
 
-            RudeRejection rejection = item as RudeRejection;
+            var rejection = item as RudeRejection;
             if (rejection != null) {
-                if (OnRudeRejection != null) OnRudeRejection(this, new EslRudeRejectionEventArgs(rejection));
+                if (OnRudeRejection != null) await OnRudeRejection(this, new EslRudeRejectionEventArgs(rejection)).ConfigureAwait(false);
                 return;
             }
 
-            LogData logdata = item as LogData;
+            var logdata = item as LogData;
             if (logdata != null) {
                 //todo handle log/data
                 return;
             }
 
-            EslMessage msg = item as EslMessage;
-            if (OnUnhandledMessage != null) OnUnhandledMessage(this, new EslUnhandledMessageEventArgs(msg));
+            var msg = item as EslMessage;
+            if (OnUnhandledMessage != null) await OnUnhandledMessage(this, new EslUnhandledMessageEventArgs(msg)).ConfigureAwait(false);
         }
 
         /// <summary>
@@ -756,6 +776,8 @@ namespace NetFreeSwitch.Framework.FreeSwitch.Outbound {
         /// </summary>
         /// <param name="channel">the Tcp channel used to send the request</param>
         /// <param name="sentMessage">the message sent</param>
-        private void OnSendCompleted(ITcpChannel channel, object sentMessage) { _sendCompletedSemaphore.Release(); }
+        private void OnSendCompleted(ITcpChannel channel, object sentMessage) {
+            _sendCompletedSemaphore.Release();
+        }
     }
 }
