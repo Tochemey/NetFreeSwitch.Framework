@@ -25,6 +25,7 @@ using System.Net;
 using System.Net.Sockets;
 using System.Threading;
 using System.Threading.Tasks;
+using NetFreeSwitch.Framework.Common;
 using NetFreeSwitch.Framework.FreeSwitch.Commands;
 using NetFreeSwitch.Framework.FreeSwitch.Events;
 using NetFreeSwitch.Framework.FreeSwitch.Messages;
@@ -48,7 +49,6 @@ namespace NetFreeSwitch.Framework.FreeSwitch.Inbound {
         private readonly ConcurrentQueue<CommandAsyncEvent> _requestsQueue;
         private readonly SemaphoreSlim _sendCompletedSemaphore = new SemaphoreSlim(0, 1);
         private readonly SemaphoreSlim _sendQueueSemaphore = new SemaphoreSlim(1, 1);
-        private ConnectedCall _connectedCall;
         private Exception _sendException;
 
         public FreeSwitch(ref ITcpChannel channel) {
@@ -60,87 +60,175 @@ namespace NetFreeSwitch.Framework.FreeSwitch.Inbound {
             MessageReceived += OnMessageReceived;
         }
 
-        public event EventHandler<EslEventArgs> OnBackgroundJob = delegate { };
-
-        public event EventHandler<EslEventArgs> OnCallUpdate = delegate { };
-
-        public event EventHandler<EslEventArgs> OnChannelAnswer = delegate { };
-
-        public event EventHandler<EslEventArgs> OnChannelBridge = delegate { };
-
-        public event EventHandler<EslEventArgs> OnChannelExecute = delegate { };
-
-        public event EventHandler<EslEventArgs> OnChannelExecuteComplete = delegate { };
-
-        public event EventHandler<EslEventArgs> OnChannelHangup = delegate { };
-
-        public event EventHandler<EslEventArgs> OnChannelHangupComplete = delegate { };
-
-        public event EventHandler<EslEventArgs> OnChannelOriginate = delegate { };
-
-        public event EventHandler<EslEventArgs> OnChannelPark = delegate { };
-
-        public event EventHandler<EslEventArgs> OnChannelProgress = delegate { };
-
-        public event EventHandler<EslEventArgs> OnChannelProgressMedia = delegate { };
-
-        public event EventHandler<EslEventArgs> OnChannelState = delegate { };
-
-        public event EventHandler<EslEventArgs> OnChannelUnbridge = delegate { };
-
-        public event EventHandler<EslEventArgs> OnChannelUnPark = delegate { };
-
-        public event EventHandler<EslEventArgs> OnCustom = delegate { };
-
-        public event EventHandler<EslDisconnectNoticeEventArgs> OnDisconnectNotice = delegate { };
-
-        public event EventHandler<EslEventArgs> OnDtmf = delegate { };
-
-        public event EventHandler<EslEventArgs> OnReceivedUnHandledEvent = delegate { };
-
-        public event EventHandler<EslEventArgs> OnRecordStop = delegate { };
-
-        public event EventHandler<EslRudeRejectionEventArgs> OnRudeRejection = delegate { };
-
-        public event EventHandler<EslEventArgs> OnSessionHeartbeat = delegate { };
-
-        public event EventHandler<EslUnhandledMessageEventArgs> OnUnhandledMessage = delegate { };
-
         /// <summary>
         ///     Can be compared with a session in a web server.
         /// </summary>
-        public IChannelData ChannelData { get { return _channel.Data; } }
+        public IChannelData ChannelData => _channel.Data;
 
         /// <summary>
         ///     Connection State
         /// </summary>
-        public bool Connected { get { return _channel != null && _channel.IsConnected; } }
+        public bool Connected => _channel != null && _channel.IsConnected;
 
         /// <summary>
         ///     Connected Call data
         /// </summary>
-        public ConnectedCall ConnectedCall { get { return _connectedCall; } }
+        public ConnectedCall ConnectedCall { get; private set; }
 
         /// <summary>
         ///     Something failed during processing.
         /// </summary>
-        public ErrorHandler Error { get; private set; }
+        public ErrorHandler Error { get; }
 
         /// <summary>
         ///     Channel received a new message
         /// </summary>
-        public MessageHandler MessageReceived { get; private set; }
+        public MessageHandler MessageReceived { get; }
 
         /// <summary>
         ///     Address to the currently connected client.
         /// </summary>
-        public EndPoint RemoteEndPoint { get { return _channel.RemoteEndpoint; } }
+        public EndPoint RemoteEndPoint => _channel.RemoteEndpoint;
 
-        public async Task<CommandReply> Answer() { return await ExecuteApplication("answer", true); }
+        public async Task<CommandReply> Answer() {
+            return await ExecuteApplication("answer", true);
+        }
 
-        public async Task<CommandReply> BindDigitAction(Guid id, string command, bool eventLock = false) { return await ExecuteApplication("bind_digit_action", command, eventLock); }
+        public async Task<CommandReply> BindDigitAction(Guid id, string command, bool eventLock = false) {
+            return await ExecuteApplication("bind_digit_action", command, eventLock);
+        }
 
-        public async Task<CommandReply> Bridge(Guid id, string brigdeText) { return await ExecuteApplication("bridge", brigdeText, false); }
+        public async Task<CommandReply> Bridge(Guid id, string brigdeText) {
+            return await ExecuteApplication("bridge", brigdeText, false);
+        }
+
+        /// <summary>
+        ///     Hangup().
+        /// </summary>
+        /// <param name="id">The channel Id</param>
+        /// <param name="reason">The hangup reason</param>
+        /// <returns></returns>
+        public async Task<CommandReply> Hangup(Guid id, string reason) {
+            return await ExecuteApplication("hangup", reason, true);
+        }
+
+        public async Task<CommandReply> PlayAudioFile(Guid id, string filePath, bool eventLock) {
+            return await ExecuteApplication("playback", filePath, eventLock);
+        }
+
+        public async Task<CommandReply> PreAnswer(Guid id) {
+            return await ExecuteApplication("pre_answer", false);
+        }
+
+        public async Task<CommandReply> Record(Guid id, string path, int? timeLimit, int? silenceThreshhold,
+            int? silenceHits, bool eventLock) {
+            return
+                await
+                    ExecuteApplication("record",
+                        path + " " + (timeLimit.HasValue ? timeLimit.ToString() : "") + " " +
+                        (silenceThreshhold.HasValue ? silenceThreshhold.ToString() : "") + " " +
+                        (silenceHits.HasValue ? silenceHits.ToString() : ""), eventLock);
+        }
+
+        public async Task<CommandReply> RingReady(bool eventLock) {
+            return await ExecuteApplication("ring_ready", true);
+        }
+
+        public async Task<CommandReply> Say(Guid id, string language, EslSayTypes type, EslSayMethods method,
+            EslSayGenders gender, string text, int loop, bool eventLock) {
+            return
+                await
+                    ExecuteApplication("say",
+                        language + " " + type + " " + method.ToString().Replace("_", "/") + " " + gender + " " + text,
+                        loop, eventLock);
+        }
+
+        public async Task<CommandReply> SetDigitActionRealm(Guid id, string realm, bool eventLock) {
+            return await ExecuteApplication("digit_action_set_realm", realm ?? "all", eventLock);
+        }
+
+        public async Task<CommandReply> SetVariable(Guid id, string name, string value) {
+            if (string.IsNullOrEmpty(value))
+                return await ExecuteApplication("unset", name, false);
+            return await ExecuteApplication("set", name + "=" + value, false);
+        }
+
+        public async Task<CommandReply> SetVariable(Guid id, string name, string value, bool eventLock) {
+            if (string.IsNullOrEmpty(value))
+                return await ExecuteApplication("unset", name, eventLock);
+            return await ExecuteApplication("set", name + "=" + value, eventLock);
+        }
+
+        public async Task<CommandReply> Sleep(Guid id, int milliSeconds) {
+            return await ExecuteApplication("sleep", Convert.ToString(milliSeconds), true);
+        }
+
+        public async Task<CommandReply> Sleep(Guid id, int milliSeconds, bool eventLock) {
+            return await ExecuteApplication("sleep", Convert.ToString(milliSeconds), eventLock);
+        }
+
+        public async Task<CommandReply> Speak(Guid id, string engine, string voice, string text, string timerName,
+            int loop, bool eventLock) {
+            return
+                await
+                    ExecuteApplication("speak",
+                        engine + "|" + voice + "|" + text + (!string.IsNullOrEmpty(timerName) ? "|" + timerName : ""),
+                        loop, eventLock);
+        }
+
+        public async Task<CommandReply> StartDtmf(Guid id, bool eventLock) {
+            return await ExecuteApplication("start_dtmf", string.Empty, eventLock);
+        }
+
+        public async Task<CommandReply> StopDtmf(bool eventLock = false) {
+            return await ExecuteApplication("stop_dtmf", eventLock);
+        }
+
+        public event AsyncEventHandler<EslEventArgs> OnBackgroundJob;
+
+        public event AsyncEventHandler<EslEventArgs> OnCallUpdate;
+
+        public event AsyncEventHandler<EslEventArgs> OnChannelAnswer;
+
+        public event AsyncEventHandler<EslEventArgs> OnChannelBridge;
+
+        public event AsyncEventHandler<EslEventArgs> OnChannelExecute;
+
+        public event AsyncEventHandler<EslEventArgs> OnChannelExecuteComplete;
+
+        public event AsyncEventHandler<EslEventArgs> OnChannelHangup;
+
+        public event AsyncEventHandler<EslEventArgs> OnChannelHangupComplete;
+
+        public event AsyncEventHandler<EslEventArgs> OnChannelOriginate;
+
+        public event AsyncEventHandler<EslEventArgs> OnChannelPark;
+
+        public event AsyncEventHandler<EslEventArgs> OnChannelProgress;
+
+        public event AsyncEventHandler<EslEventArgs> OnChannelProgressMedia;
+
+        public event AsyncEventHandler<EslEventArgs> OnChannelState;
+
+        public event AsyncEventHandler<EslEventArgs> OnChannelUnbridge;
+
+        public event AsyncEventHandler<EslEventArgs> OnChannelUnPark;
+
+        public event AsyncEventHandler<EslEventArgs> OnCustom;
+
+        public event AsyncEventHandler<EslDisconnectNoticeEventArgs> OnDisconnectNotice;
+
+        public event AsyncEventHandler<EslEventArgs> OnDtmf;
+
+        public event AsyncEventHandler<EslEventArgs> OnReceivedUnHandledEvent;
+
+        public event AsyncEventHandler<EslEventArgs> OnRecordStop;
+
+        public event AsyncEventHandler<EslRudeRejectionEventArgs> OnRudeRejection;
+
+        public event AsyncEventHandler<EslEventArgs> OnSessionHeartbeat;
+
+        public event AsyncEventHandler<EslUnhandledMessageEventArgs> OnUnhandledMessage;
 
         /// <summary>
         ///     Close()
@@ -148,7 +236,7 @@ namespace NetFreeSwitch.Framework.FreeSwitch.Inbound {
         public async Task Close() {
             if (_channel == null)
                 return;
-            _connectedCall = null;
+            ConnectedCall = null;
             await _channel.CloseAsync();
         }
 
@@ -157,16 +245,14 @@ namespace NetFreeSwitch.Framework.FreeSwitch.Inbound {
         /// </summary>
         /// <returns>Async Task</returns>
         public async Task Connect() {
-            ConnectCommand command = new ConnectCommand();
-            CommandReply reply = await Send(command);
-            if (reply != null) {
-                string eventName = reply["Event-Name"];
-                if (!string.IsNullOrEmpty(eventName)
-                    && eventName.Equals("CHANNEL_DATA")) {
-                    var properties = new Dictionary<string, string>();
-                    reply.CopyParameters(ref properties);
-                    _connectedCall = new ConnectedCall(properties);
-                }
+            var command = new ConnectCommand();
+            var reply = await Send(command);
+            var eventName = reply?["Event-Name"];
+            if (!string.IsNullOrEmpty(eventName)
+                && eventName.Equals("CHANNEL_DATA")) {
+                var properties = new Dictionary<string, string>();
+                reply.CopyParameters(ref properties);
+                ConnectedCall = new ConnectedCall(properties);
             }
         }
 
@@ -176,49 +262,31 @@ namespace NetFreeSwitch.Framework.FreeSwitch.Inbound {
         /// </summary>
         /// <returns></returns>
         public async Task<bool> DivertEvents() {
-            DivertEventsCommand command = new DivertEventsCommand(true);
-            CommandReply reply = await Send(command);
+            var command = new DivertEventsCommand(true);
+            var reply = await Send(command);
             return reply != null && reply.IsSuccessful;
         }
-
-        /// <summary>
-        ///     Hangup().
-        /// </summary>
-        /// <param name="id">The channel Id</param>
-        /// <param name="reason">The hangup reason</param>
-        /// <returns></returns>
-        public async Task<CommandReply> Hangup(Guid id, string reason) { return await ExecuteApplication("hangup", reason, true); }
 
         /// <summary>
         ///     MyEvents(). Receive only events from this channel.
         /// </summary>
         /// <returns></returns>
         public async Task<bool> MyEvents() {
-            Guid guid = Guid.Parse(ConnectedCall.UniqueID);
-            MyEventsCommand command = new MyEventsCommand(guid);
-            CommandReply reply = await Send(command);
+            var guid = Guid.Parse(ConnectedCall.UniqueID);
+            var command = new MyEventsCommand(guid);
+            var reply = await Send(command);
             return reply != null && reply.IsSuccessful;
         }
-
-        public async Task<CommandReply> PlayAudioFile(Guid id, string filePath, bool eventLock) { return await ExecuteApplication("playback", filePath, eventLock); }
-
-        public async Task<CommandReply> PreAnswer(Guid id) { return await ExecuteApplication("pre_answer", false); }
-
-        public async Task<CommandReply> Record(Guid id, string path, int? timeLimit, int? silenceThreshhold, int? silenceHits, bool eventLock) { return await ExecuteApplication("record", path + " " + (timeLimit.HasValue ? timeLimit.ToString() : "") + " " + (silenceThreshhold.HasValue ? silenceThreshhold.ToString() : "") + " " + (silenceHits.HasValue ? silenceHits.ToString() : ""), eventLock); }
 
         /// <summary>
         ///     Resume().
         /// </summary>
         /// <returns></returns>
         public async Task<bool> Resume() {
-            ResumeCommand command = new ResumeCommand();
-            CommandReply reply = await Send(command);
+            var command = new ResumeCommand();
+            var reply = await Send(command);
             return reply != null && reply.IsSuccessful;
         }
-
-        public async Task<CommandReply> RingReady(bool eventLock) { return await ExecuteApplication("ring_ready", true); }
-
-        public async Task<CommandReply> Say(Guid id, string language, EslSayTypes type, EslSayMethods method, EslSayGenders gender, string text, int loop, bool eventLock) { return await ExecuteApplication("say", language + " " + type + " " + method.ToString().Replace("_", "/") + " " + gender + " " + text, loop, eventLock); }
 
         /// <summary>
         ///     Send().
@@ -230,7 +298,8 @@ namespace NetFreeSwitch.Framework.FreeSwitch.Inbound {
             if (!Connected)
                 return null;
             // Send command
-            CommandAsyncEvent event2 = EnqueueCommand(command);
+            var event2 = EnqueueCommand(command);
+            if (_log.IsDebugEnabled) _log.Debug("command to be sent {0}", command.ToString());
             await SendAsync(command);
             return await event2.Task as CommandReply;
         }
@@ -245,7 +314,7 @@ namespace NetFreeSwitch.Framework.FreeSwitch.Inbound {
             if (!Connected)
                 return null;
             // Send the command
-            CommandAsyncEvent event2 = EnqueueCommand(command);
+            var event2 = EnqueueCommand(command);
             await SendAsync(command);
             return await event2.Task as ApiResponse;
         }
@@ -268,28 +337,14 @@ namespace NetFreeSwitch.Framework.FreeSwitch.Inbound {
             return Guid.TryParse(jobId, out jobUuid) ? jobUuid : Guid.Empty;
         }
 
-        public async Task<CommandReply> SetDigitActionRealm(Guid id, string realm, bool eventLock) { return await ExecuteApplication("digit_action_set_realm", (realm ?? "all"), eventLock); }
-
         /// <summary>
         ///     SendLog(). It is used to request for FreeSwitch log.
         /// </summary>
         /// <param name="level">The log level to specify</param>
         /// <returns></returns>
         public async Task SetLogLevel(EslLogLevels level) {
-            LogCommand command = new LogCommand(level);
+            var command = new LogCommand(level);
             await SendAsync(command);
-        }
-
-        public async Task<CommandReply> SetVariable(Guid id, string name, string value) {
-            if (string.IsNullOrEmpty(value))
-                return await ExecuteApplication("unset", name, false);
-            return await ExecuteApplication("set", name + "=" + value, false);
-        }
-
-        public async Task<CommandReply> SetVariable(Guid id, string name, string value, bool eventLock) {
-            if (string.IsNullOrEmpty(value))
-                return await ExecuteApplication("unset", name, eventLock);
-            return await ExecuteApplication("set", name + "=" + value, eventLock);
         }
 
         /// <summary>
@@ -299,89 +354,100 @@ namespace NetFreeSwitch.Framework.FreeSwitch.Inbound {
         /// <returns>Async task</returns>
         public async Task ShutdownGracefully() {
             // Let us send exit command to FreeSwitch
-            ExitCommand exit = new ExitCommand();
+            var exit = new ExitCommand();
             await SendAsync(exit);
         }
-
-        public async Task<CommandReply> Sleep(Guid id, int milliSeconds) { return await ExecuteApplication("sleep", Convert.ToString(milliSeconds), true); }
-
-        public async Task<CommandReply> Sleep(Guid id, int milliSeconds, bool eventLock) { return await ExecuteApplication("sleep", Convert.ToString(milliSeconds), eventLock); }
-
-        public async Task<CommandReply> Speak(Guid id, string engine, string voice, string text, string timerName, int loop, bool eventLock) { return await ExecuteApplication("speak", engine + "|" + voice + "|" + text + (!string.IsNullOrEmpty(timerName) ? "|" + timerName : ""), loop, eventLock); }
-
-        public async Task<CommandReply> StartDtmf(Guid id, bool eventLock) { return await ExecuteApplication("start_dtmf", string.Empty, eventLock); }
-
-        public async Task<CommandReply> StopDtmf(bool eventLock = false) { return await ExecuteApplication("stop_dtmf", eventLock); }
 
         /// <summary>
         ///     Used to dispatch .NET events
         /// </summary>
-        protected void DispatchEvents(EslEventType eventType, EslEventArgs ea) {
-            EventHandler<EslEventArgs> handler = null;
+        protected async Task DispatchEvents(EslEventType eventType, EslEventArgs ea) {
+            AsyncEventHandler<EslEventArgs> handler = null;
             switch (eventType) {
                 case EslEventType.BACKGROUND_JOB:
                     handler = OnBackgroundJob;
                     break;
+
                 case EslEventType.CALL_UPDATE:
                     handler = OnCallUpdate;
                     break;
+
                 case EslEventType.CHANNEL_BRIDGE:
                     handler = OnChannelBridge;
                     break;
+
                 case EslEventType.CHANNEL_HANGUP:
                     handler = OnChannelHangup;
                     break;
+
                 case EslEventType.CHANNEL_HANGUP_COMPLETE:
                     handler = OnChannelHangupComplete;
                     break;
+
                 case EslEventType.CHANNEL_PROGRESS:
                     handler = OnChannelProgress;
                     break;
+
                 case EslEventType.CHANNEL_PROGRESS_MEDIA:
                     handler = OnChannelProgressMedia;
                     break;
+
                 case EslEventType.CHANNEL_EXECUTE:
                     handler = OnChannelExecute;
                     break;
+
                 case EslEventType.CHANNEL_EXECUTE_COMPLETE:
                     handler = OnChannelExecuteComplete;
                     break;
+
                 case EslEventType.CHANNEL_UNBRIDGE:
                     handler = OnChannelUnbridge;
                     break;
+
                 case EslEventType.SESSION_HEARTBEAT:
                     handler = OnSessionHeartbeat;
                     break;
+
                 case EslEventType.DTMF:
                     handler = OnDtmf;
                     break;
+
                 case EslEventType.RECORD_STOP:
                     handler = OnRecordStop;
                     break;
+
                 case EslEventType.CUSTOM:
                     handler = OnCustom;
                     break;
+
                 case EslEventType.CHANNEL_STATE:
                     handler = OnChannelState;
                     break;
+
                 case EslEventType.CHANNEL_ANSWER:
                     handler = OnChannelAnswer;
                     break;
+
                 case EslEventType.CHANNEL_ORIGINATE:
                     handler = OnChannelOriginate;
                     break;
+
                 case EslEventType.CHANNEL_PARK:
                     handler = OnChannelPark;
                     break;
+
                 case EslEventType.CHANNEL_UNPARK:
                     handler = OnChannelUnPark;
                     break;
+
                 case EslEventType.UN_HANDLED_EVENT:
                     handler = OnReceivedUnHandledEvent;
                     break;
             }
             if (handler == null) return;
-            try { handler(this, ea); }
+            try {
+                await handler(this, ea);
+            }
             catch (Exception) {
                 // ignored
             }
@@ -405,8 +471,10 @@ namespace NetFreeSwitch.Framework.FreeSwitch.Inbound {
         /// <param name="applicationArguments">The application arguments</param>
         /// <param name="eventLock">Asynchronous status</param>
         /// <returns></returns>
-        protected async Task<CommandReply> ExecuteApplication(string applicationName, string applicationArguments, bool eventLock) {
-            SendMsgCommand command = new SendMsgCommand(Guid.Parse(ConnectedCall.UniqueID), SendMsgCommand.CALL_COMMAND, applicationName, applicationArguments, eventLock);
+        protected async Task<CommandReply> ExecuteApplication(string applicationName, string applicationArguments,
+            bool eventLock) {
+            var command = new SendMsgCommand(Guid.Parse(ConnectedCall.UniqueID), SendMsgCommand.CALL_COMMAND,
+                applicationName, applicationArguments, eventLock);
             return await Send(command);
         }
 
@@ -417,75 +485,155 @@ namespace NetFreeSwitch.Framework.FreeSwitch.Inbound {
         /// <param name="eventLock">Asynchronous status</param>
         /// <returns></returns>
         protected async Task<CommandReply> ExecuteApplication(string applicationName, bool eventLock) {
-            SendMsgCommand command = new SendMsgCommand(applicationName, string.Empty, eventLock);
+            var command = new SendMsgCommand(applicationName, string.Empty, eventLock);
             return await Send(command);
+        }
+
+        protected async Task HandleResponse(object item) {
+            if (item == null) return;
+            var @event = item as EslEvent;
+            if (@event != null) {
+                await PopEvent(@event);
+                return;
+            }
+
+            var reply = item as CommandReply;
+            if (reply != null) {
+                if (_requestsQueue.Count <= 0) return;
+                CommandAsyncEvent event2;
+                if (!_requestsQueue.TryDequeue(out event2)) return;
+                event2?.Complete(reply);
+                return;
+            }
+
+            var response = item as ApiResponse;
+            if (response != null) {
+                if (_requestsQueue.Count <= 0) return;
+                CommandAsyncEvent event2;
+                if (!_requestsQueue.TryDequeue(out event2)) return;
+                event2?.Complete(response);
+                return;
+            }
+
+            var notice = item as DisconnectNotice;
+            if (notice != null) {
+                await OnDisconnectNotice?.Invoke(this, new EslDisconnectNoticeEventArgs(notice));
+                ConnectedCall = null;
+                await _channel.CloseAsync();
+                return;
+            }
+
+            var rejection = item as RudeRejection;
+            if (rejection != null) {
+                await OnRudeRejection?.Invoke(this, new EslRudeRejectionEventArgs(rejection));
+                return;
+            }
+
+            var logdata = item as LogData;
+            if (logdata != null) {
+                //todo handle log/data
+                return;
+            }
+
+            var msg = item as EslMessage;
+            await OnUnhandledMessage?.Invoke(this, new EslUnhandledMessageEventArgs(msg));
         }
 
         /// <summary>
         ///     FreeSwitch Events listener hook
         /// </summary>
-        protected void PopEvent(EslEvent @event) {
+        protected async Task PopEvent(EslEvent @event) {
             if (string.IsNullOrEmpty(@event.EventName)) return;
             switch (@event.EventName.ToUpper()) {
                 case "CHANNEL_HANGUP":
-                    DispatchEvents(EslEventType.CHANNEL_HANGUP, new EslEventArgs(new ChannelHangup(@event.Items)));
+                    await DispatchEvents(EslEventType.CHANNEL_HANGUP, new EslEventArgs(new ChannelHangup(@event.Items)));
                     break;
+
                 case "CHANNEL_HANGUP_COMPLETE":
-                    DispatchEvents(EslEventType.CHANNEL_HANGUP_COMPLETE, new EslEventArgs(new ChannelHangup(@event.Items)));
+                    await DispatchEvents(EslEventType.CHANNEL_HANGUP_COMPLETE,
+                        new EslEventArgs(new ChannelHangup(@event.Items)));
                     break;
+
                 case "CHANNEL_PROGRESS":
-                    DispatchEvents(EslEventType.CHANNEL_PROGRESS, new EslEventArgs(new ChannelProgress(@event.Items)));
+                    await
+                        DispatchEvents(EslEventType.CHANNEL_PROGRESS,
+                            new EslEventArgs(new ChannelProgress(@event.Items)));
                     break;
+
                 case "CHANNEL_PROGRESS_MEDIA":
-                    DispatchEvents(EslEventType.CHANNEL_PROGRESS_MEDIA, new EslEventArgs(new ChannelProgressMedia(@event.Items)));
+                    await DispatchEvents(EslEventType.CHANNEL_PROGRESS_MEDIA,
+                        new EslEventArgs(new ChannelProgressMedia(@event.Items)));
                     break;
+
                 case "CHANNEL_EXECUTE":
-                    DispatchEvents(EslEventType.CHANNEL_EXECUTE, new EslEventArgs(new ChannelExecute(@event.Items)));
+                    await
+                        DispatchEvents(EslEventType.CHANNEL_EXECUTE, new EslEventArgs(new ChannelExecute(@event.Items)));
                     break;
+
                 case "CHANNEL_EXECUTE_COMPLETE":
-                    DispatchEvents(EslEventType.CHANNEL_EXECUTE_COMPLETE, new EslEventArgs(new ChannelExecuteComplete(@event.Items)));
+                    await DispatchEvents(EslEventType.CHANNEL_EXECUTE_COMPLETE,
+                        new EslEventArgs(new ChannelExecuteComplete(@event.Items)));
                     break;
+
                 case "CHANNEL_BRIDGE":
-                    DispatchEvents(EslEventType.CHANNEL_BRIDGE, new EslEventArgs(new ChannelBridge(@event.Items)));
+                    await DispatchEvents(EslEventType.CHANNEL_BRIDGE, new EslEventArgs(new ChannelBridge(@event.Items)));
                     break;
+
                 case "CHANNEL_UNBRIDGE":
-                    DispatchEvents(EslEventType.CHANNEL_UNBRIDGE, new EslEventArgs(new ChannelUnbridge(@event.Items)));
+                    await
+                        DispatchEvents(EslEventType.CHANNEL_UNBRIDGE,
+                            new EslEventArgs(new ChannelUnbridge(@event.Items)));
                     break;
+
                 case "BACKGROUND_JOB":
-                    DispatchEvents(EslEventType.BACKGROUND_JOB, new EslEventArgs(new BackgroundJob(@event.Items)));
+                    await DispatchEvents(EslEventType.BACKGROUND_JOB, new EslEventArgs(new BackgroundJob(@event.Items)));
                     break;
+
                 case "SESSION_HEARTBEAT":
-                    DispatchEvents(EslEventType.SESSION_HEARTBEAT, new EslEventArgs(new SessionHeartbeat(@event.Items)));
+                    await
+                        DispatchEvents(EslEventType.SESSION_HEARTBEAT,
+                            new EslEventArgs(new SessionHeartbeat(@event.Items)));
                     break;
+
                 case "CHANNEL_STATE":
-                    DispatchEvents(EslEventType.CHANNEL_STATE, new EslEventArgs(new ChannelStateEvent(@event.Items)));
+                    await
+                        DispatchEvents(EslEventType.CHANNEL_STATE, new EslEventArgs(new ChannelStateEvent(@event.Items)));
                     break;
+
                 case "DTMF":
-                    DispatchEvents(EslEventType.DTMF, new EslEventArgs(new Dtmf(@event.Items)));
+                    await DispatchEvents(EslEventType.DTMF, new EslEventArgs(new Dtmf(@event.Items)));
                     break;
+
                 case "RECORD_STOP":
-                    DispatchEvents(EslEventType.RECORD_STOP, new EslEventArgs(new RecordStop(@event.Items)));
+                    await DispatchEvents(EslEventType.RECORD_STOP, new EslEventArgs(new RecordStop(@event.Items)));
                     break;
+
                 case "CALL_UPDATE":
-                    DispatchEvents(EslEventType.CALL_UPDATE, new EslEventArgs(new CallUpdate(@event.Items)));
+                    await DispatchEvents(EslEventType.CALL_UPDATE, new EslEventArgs(new CallUpdate(@event.Items)));
                     break;
+
                 case "CUSTOM":
-                    DispatchEvents(EslEventType.CUSTOM, new EslEventArgs(new Custom(@event.Items)));
+                    await DispatchEvents(EslEventType.CUSTOM, new EslEventArgs(new Custom(@event.Items)));
                     break;
+
                 case "CHANNEL_ANSWER":
-                    DispatchEvents(EslEventType.CHANNEL_ANSWER, new EslEventArgs(@event));
+                    await DispatchEvents(EslEventType.CHANNEL_ANSWER, new EslEventArgs(@event));
                     break;
+
                 case "CHANNEL_ORIGINATE":
-                    DispatchEvents(EslEventType.CHANNEL_ORIGINATE, new EslEventArgs(@event));
+                    await DispatchEvents(EslEventType.CHANNEL_ORIGINATE, new EslEventArgs(@event));
                     break;
+
                 case "CHANNEL_PARK":
-                    DispatchEvents(EslEventType.CHANNEL_PARK, new EslEventArgs(new ChannelPark(@event.Items)));
+                    await DispatchEvents(EslEventType.CHANNEL_PARK, new EslEventArgs(new ChannelPark(@event.Items)));
                     break;
+
                 case "CHANNEL_UNPARK":
-                    DispatchEvents(EslEventType.CHANNEL_UNPARK, new EslEventArgs(@event));
+                    await DispatchEvents(EslEventType.CHANNEL_UNPARK, new EslEventArgs(@event));
                     break;
+
                 default:
-                    DispatchEvents(EslEventType.UN_HANDLED_EVENT, new EslEventArgs(@event));
+                    await DispatchEvents(EslEventType.UN_HANDLED_EVENT, new EslEventArgs(@event));
                     break;
             }
         }
@@ -496,7 +644,7 @@ namespace NetFreeSwitch.Framework.FreeSwitch.Inbound {
         /// <param name="message">the command to send</param>
         /// <returns>Async task</returns>
         protected async Task SendAsync(object message) {
-            if (message == null) throw new ArgumentNullException("message");
+            if (message == null) throw new ArgumentNullException(nameof(message));
             if (_sendException != null) {
                 var ex = _sendException;
                 _sendException = null;
@@ -537,21 +685,20 @@ namespace NetFreeSwitch.Framework.FreeSwitch.Inbound {
         /// <param name="loop">The number of times to execute the app</param>
         /// <param name="eventLock">Asynchronous state</param>
         /// <returns>Async CommandReply</returns>
-        private async Task<CommandReply> ExecuteApplication(string applicationName, string applicationArguments, int loop, bool eventLock) {
-            SendMsgCommand command = new SendMsgCommand(Guid.Parse(ConnectedCall.UniqueID), SendMsgCommand.CALL_COMMAND, applicationName, applicationArguments, eventLock, loop);
+        private async Task<CommandReply> ExecuteApplication(string applicationName, string applicationArguments,
+            int loop, bool eventLock) {
+            var command = new SendMsgCommand(Guid.Parse(ConnectedCall.UniqueID), SendMsgCommand.CALL_COMMAND,
+                applicationName, applicationArguments, eventLock, loop);
             return await Send(command);
         }
 
         private void OnError(ITcpChannel channel, Exception exception) {
-            if (exception != null) {
-                SocketException socketException = exception as SocketException;
-                if (socketException != null) {
-                    var soke = socketException;
-                    if (soke.SocketErrorCode == SocketError.Shutdown) {
-                        _log.Warn("Channel [#{0}--Address={1}] Socket already closed", channel.ChannelId, channel.RemoteEndpoint);
-                        return;
-                    }
-                }
+            var socketException = exception as SocketException;
+            var soke = socketException;
+            if (soke?.SocketErrorCode == SocketError.Shutdown) {
+                _log.Warn("Channel [#{0}--Address={1}] Socket already closed", channel.ChannelId,
+                    channel.RemoteEndpoint);
+                return;
             }
             _log.Error(exception);
         }
@@ -561,10 +708,10 @@ namespace NetFreeSwitch.Framework.FreeSwitch.Inbound {
             if (!channel.ChannelId.Equals(_channel.ChannelId)) return;
             var decodedMessage = message as EslDecodedMessage;
             // Handle decoded message.
-            if (decodedMessage == null) return;
-            if (decodedMessage.Headers == null
+            if (decodedMessage?.Headers == null
                 || !decodedMessage.Headers.HasKeys())
                 return;
+
             var headers = decodedMessage.Headers;
             object response;
             var contentType = headers["Content-Type"];
@@ -575,28 +722,35 @@ namespace NetFreeSwitch.Framework.FreeSwitch.Inbound {
                     var reply = new CommandReply(headers, decodedMessage.OriginalMessage);
                     response = reply;
                     break;
+
                 case "api/response":
                     var apiResponse = new ApiResponse(decodedMessage.BodyText);
                     response = apiResponse;
                     break;
+
                 case "text/event-plain":
-                    var parameters = decodedMessage.BodyLines.AllKeys.ToDictionary(key => key, key => decodedMessage.BodyLines[key]);
+                    var parameters = decodedMessage.BodyLines.AllKeys.ToDictionary(key => key,
+                        key => decodedMessage.BodyLines[key]);
                     var @event = new EslEvent(parameters);
                     response = @event;
                     break;
+
                 case "log/data":
                     var logdata = new LogData(headers, decodedMessage.BodyText);
                     response = logdata;
                     break;
+
                 case "text/disconnect-notice":
                     var notice = new DisconnectNotice(decodedMessage.BodyText);
                     response = notice;
                     break;
+
                 case "text/rude-rejection":
                     await _channel.CloseAsync();
                     var reject = new RudeRejection(decodedMessage.BodyText);
                     response = reject;
                     break;
+
                 default:
                     // Here we are handling an unknown message
                     var msg = new EslMessage(decodedMessage.Headers, decodedMessage.OriginalMessage);
@@ -607,58 +761,12 @@ namespace NetFreeSwitch.Framework.FreeSwitch.Inbound {
             await HandleResponse(response);
         }
 
-        protected async Task HandleResponse(object item) {
-            if (item == null) return;
-            var @event = item as EslEvent;
-            if (@event != null) {
-                PopEvent(@event);
-                return;
+        private void OnMessageSent(ITcpChannel channel, object message) {
+            if (_log.IsDebugEnabled) {
+                var cmd = message as BaseCommand;
+                _log.Debug("command sent to freeSwitch <<{0}>>", cmd.ToString());
             }
-
-            CommandReply reply = item as CommandReply;
-            if (reply != null) {
-                if (_requestsQueue.Count <= 0) return;
-                CommandAsyncEvent event2;
-                if (!_requestsQueue.TryDequeue(out event2)) return;
-                if (event2 == null) return;
-                event2.Complete(reply);
-                return;
-            }
-
-            ApiResponse response = item as ApiResponse;
-            if (response != null) {
-                if (_requestsQueue.Count <= 0) return;
-                CommandAsyncEvent event2;
-                if (!_requestsQueue.TryDequeue(out event2)) return;
-                if (event2 == null) return;
-                event2.Complete(response);
-                return;
-            }
-
-            DisconnectNotice notice = item as DisconnectNotice;
-            if (notice != null) {
-                if (OnDisconnectNotice != null) OnDisconnectNotice(this, new EslDisconnectNoticeEventArgs(notice));
-                _connectedCall = null;
-                await _channel.CloseAsync();
-                return;
-            }
-
-            RudeRejection rejection = item as RudeRejection;
-            if (rejection != null) {
-                if (OnRudeRejection != null) OnRudeRejection(this, new EslRudeRejectionEventArgs(rejection));
-                return;
-            }
-
-            LogData logdata = item as LogData;
-            if (logdata != null) {
-                //todo handle log/data
-                return;
-            }
-
-            EslMessage msg = item as EslMessage;
-            if (OnUnhandledMessage != null) OnUnhandledMessage(this, new EslUnhandledMessageEventArgs(msg));
+            _sendCompletedSemaphore.Release();
         }
-
-        private void OnMessageSent(ITcpChannel channel, object message) { _sendCompletedSemaphore.Release(); }
     }
 }

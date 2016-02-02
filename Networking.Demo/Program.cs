@@ -62,7 +62,7 @@ namespace Networking.Demo {
                 Log.Info("\n\n" + response.Body);
 
                 // Let us make a call and handle it
-                string callCommand = "{ignore_early_media=true,originate_timeout=120}sofia/gateway/smsghlocalsip/233247063817 &socket(192.168.74.1:10000 async full)";
+                string callCommand = "{ignore_early_media=false,originate_timeout=120}sofia/gateway/smsghlocalsip/233247063817 &socket(192.168.74.1:10000 async full)";
                 BgApiCommand bgapicommand = new BgApiCommand("originate", callCommand);
                 Guid jobId = client.SendBgApi(bgapicommand).Result;
                 Log.Info("Job Id {0}", jobId);
@@ -105,8 +105,9 @@ namespace Networking.Demo {
             Log.Info("Connected client is ready");
         }
 
-        private static void OnDisconnectNotice(object sender, EslDisconnectNoticeEventArgs e) {
+        private static async Task OnDisconnectNotice(object sender, EslDisconnectNoticeEventArgs e) {
             Log.Info("Client disconnect {0}",  e.Notice.Msg);
+            await Task.Delay(0);
         }
     }
 }
