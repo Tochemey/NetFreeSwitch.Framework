@@ -91,6 +91,7 @@
     <Compile Include="FreeSwitch\Commands\ResumeCommand.cs" />
     <Compile Include="FreeSwitch\Commands\SayCommand.cs" />
     <Compile Include="FreeSwitch\Commands\SchedApiCommand.cs" />
+    <Compile Include="FreeSwitch\Commands\SendEventCommand.cs" />
     <Compile Include="FreeSwitch\Commands\SendMsgCommand.cs" />
     <Compile Include="FreeSwitch\Commands\SetVarCommand.cs" />
     <Compile Include="FreeSwitch\Commands\SleepCommand.cs" />
