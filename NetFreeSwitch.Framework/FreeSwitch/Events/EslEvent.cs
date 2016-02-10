@@ -19,6 +19,7 @@ under the License.
 
 using System;
 using System.Collections.Generic;
+using System.Linq;
 
 namespace NetFreeSwitch.Framework.FreeSwitch.Events {
     /// <summary>
@@ -64,6 +65,20 @@ namespace NetFreeSwitch.Framework.FreeSwitch.Events {
         public EslEvent AddHeader(string header, string val) {
             Items.Add(header, val);
             return this;
+        }
+
+        public EslEvent SetEventName(string eventName) {
+            Items.Add("Event-Name", eventName);
+            return this;
+        }
+
+        public EslEvent SetEventSubClass(string eventClass) {
+            Items.Add("Event-Subclass", eventClass);
+            return this;
+        }
+
+        public string ToEventCommandString() {
+            return string.Join(",", Items.Select(x => x.Key + "=" + x.Value).ToArray());
         }
     }
 }

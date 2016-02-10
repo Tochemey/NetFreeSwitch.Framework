@@ -79,7 +79,7 @@ namespace Networking.Demo {
                 //Log.Info("Authentication Status {0}", client.Authenticated);
 
             }
-
+            
             Console.ReadKey();
         }
 
