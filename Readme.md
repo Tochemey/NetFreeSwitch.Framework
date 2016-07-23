@@ -2,7 +2,7 @@
 ========================================
 
 **NOTICE: This framework is being deprecated and is no longer under active development. 
-We've since adopted the Azure DotNetty, another reactive socket-server implementation for .NET. for the underlying socket implementation.
+We've since adopted the [Azure DotNetty](https://github.com/Azure/DotNetty), another reactive socket-server implementation for .NET. for the underlying socket implementation.
 Please use this library [ModFreeSwitch](https://github.com/Tochemey/ModFreeSwitch) going forward.**
 
 ## **Overview**
