@@ -1,9 +1,9 @@
 .NET FreeSwitch Framework
 ========================================
 
-NOTICE: This framework is being deprecated and is no longer under active development. 
+**NOTICE: This framework is being deprecated and is no longer under active development. 
 We've since adopted the Azure DotNetty, another reactive socket-server implementation for .NET. for the underlying socket implementation.
-Please use this library [ModFreeSwitch](https://github.com/Tochemey/ModFreeSwitch) going forward.
+Please use this library [ModFreeSwitch](https://github.com/Tochemey/ModFreeSwitch) going forward.**
 
 ## **Overview**
 This framework helps interact with the FreeSwitch via its mod_event_socket. For more information about the mod_event_socket refer to [FreeSwitch web site](https://freeswitch.org/confluence/display/FREESWITCH/mod_event_socket).
